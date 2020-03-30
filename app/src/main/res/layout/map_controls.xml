@@ -8,6 +8,7 @@
 
     <ToggleButton
         android:id="@+id/controls_mode_btn"
+        style="@style/control_btn"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:checked="false"
@@ -21,6 +22,7 @@
 
     <Button
         android:id="@+id/controls_reset_btn"
+        style="@style/control_btn"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:text="@string/controls_reset"
@@ -31,6 +33,7 @@
 
     <ToggleButton
         android:id="@+id/controls_compass_btn"
+        style="@style/control_btn"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:text="@string/controls_options"
@@ -43,6 +46,7 @@
 
     <Button
         android:id="@+id/controls_options_btn"
+        style="@style/control_btn"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:text="@string/controls_options"

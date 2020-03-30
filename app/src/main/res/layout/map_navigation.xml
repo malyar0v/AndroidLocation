@@ -25,21 +25,21 @@
         <TextView
             style="@style/navigation_info"
             android:id="@+id/session_distance_text_view"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="5000" />
 
         <TextView
             style="@style/navigation_info"
             android:id="@+id/session_duration_text_view"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="@string/session_duration_placeholder" />
 
         <TextView
             style="@style/navigation_info"
             android:id="@+id/session_speed_text_view"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="@string/session_speed_placeholder" />
     </LinearLayout>
@@ -61,22 +61,22 @@
 
         <TextView
             style="@style/navigation_info"
-            android:id="@+id/distance_cp_to_current_text_view"
-            android:layout_width="wrap_content"
+            android:id="@+id/distance_cp_text_view"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="@string/distance_cp_to_current_placeholder" />
 
         <TextView
             style="@style/navigation_info"
-            android:id="@+id/line_distance_cp_to_current_text_view"
-            android:layout_width="wrap_content"
+            android:id="@+id/direct_distance_cp_text_view"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/line_distance_cp_to_current_placeholder" />
+            android:text="@string/direct_distance_cp_to_current_placeholder" />
 
         <TextView
             style="@style/navigation_info"
             android:id="@+id/cp_speed_text_view"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="@string/cp_speed_placeholder" />
     </LinearLayout>
@@ -98,22 +98,22 @@
 
         <TextView
             style="@style/navigation_info"
-            android:id="@+id/distance_wp_to_current_text_view"
-            android:layout_width="wrap_content"
+            android:id="@+id/distance_wp_text_view"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="@string/distance_wp_to_current_placeholder" />
 
         <TextView
             style="@style/navigation_info"
-            android:id="@+id/line_distance_wp_to_current_text_view"
-            android:layout_width="wrap_content"
+            android:id="@+id/direct_distance_wp_text_view"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/line_distance_wp_to_current_placeholder" />
+            android:text="@string/direct_distance_wp_to_current_placeholder" />
 
         <TextView
             style="@style/navigation_info"
             android:id="@+id/wp_speed_text_view"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="@string/wp_speed_placeholder" />
     </LinearLayout>

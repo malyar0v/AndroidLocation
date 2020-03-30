@@ -19,4 +19,22 @@
         <item name="android:textColor">#000</item>
     </style>
 
+    <style name="navigation_info_land" parent="navigation_info">
+        <item name="android:textAlignment">textEnd</item>
+        <item name="android:paddingEnd">8dp</item>
+
+        <item name="autoSizeMaxTextSize">24sp</item>
+        <item name="autoSizeTextType">uniform</item>
+        <item name="autoSizeMinTextSize">8sp</item>
+        <item name="autoSizeStepGranularity">1sp</item>
+    </style>
+
+    <style name="control_btn">
+        <item name="android:maxLines">1</item>
+        <item name="autoSizeMaxTextSize">24sp</item>
+        <item name="autoSizeTextType">uniform</item>
+        <item name="autoSizeMinTextSize">4sp</item>
+        <item name="autoSizeStepGranularity">2sp</item>
+    </style>
+
 </resources>
