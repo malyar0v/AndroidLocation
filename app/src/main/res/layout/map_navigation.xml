@@ -3,6 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="64dp"
+    android:maxHeight="64dp"
     android:orientation="horizontal"
     android:elevation="1dp"
     android:alpha="0.8">
@@ -12,7 +13,7 @@
         android:layout_width="wrap_content"
         android:layout_height="match_parent"
         android:layout_weight="1"
-        app:srcCompat="@drawable/ic_play_arrow_black" />
+        android:src="@drawable/ic_play_arrow_black" />
 
     <LinearLayout
         android:id="@+id/session"
@@ -49,7 +50,7 @@
         android:layout_width="wrap_content"
         android:layout_height="match_parent"
         android:layout_weight="1"
-        app:srcCompat="@drawable/ic_add_location" />
+        android:src="@drawable/ic_add_location" />
 
     <LinearLayout
         android:id="@+id/checkpoint"
@@ -86,7 +87,7 @@
         android:layout_width="wrap_content"
         android:layout_height="match_parent"
         android:layout_weight="1"
-        app:srcCompat="@drawable/ic_place_black" />
+        android:src="@drawable/ic_place_black" />
 
     <LinearLayout
         android:id="@+id/waypoint"
@@ -117,6 +118,5 @@
             android:layout_height="wrap_content"
             android:text="@string/wp_speed_placeholder" />
     </LinearLayout>
-
 
 </LinearLayout>

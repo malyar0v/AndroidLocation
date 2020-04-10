@@ -28,22 +28,25 @@ import com.google.android.gms.maps.model.MarkerOptions
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.android.synthetic.main.map_navigation.*
 
-class MainActivity : AppCompatActivity(), OnMapReadyCallback, View.OnClickListener, NavigationDataUpdatesListener {
+class MainActivity : AppCompatActivity(), OnMapReadyCallback, View.OnClickListener {
 
     companion object {
         private val TAG = this::class.java.declaringClass!!.simpleName
     }
 
-    val navigationData = NavigationData(this)
-    val navigationEventsListener: NavigationEventsListener = navigationData
-    val userEventsListener: UserEventsListener = navigationData
-
     private lateinit var mMap: GoogleMap
 
     private val broadcastReceiver = InnerBroadcastReceiver()
     private val broadcastReceiverIntentFilter: IntentFilter = IntentFilter()
+        .apply {
+            addAction(C.LOCATION_UPDATE_ACTION)
+            addAction(C.LOCATION_SERVICE_START_ACTION)
+            addAction(C.LOCATION_SERVICE_STOP_ACTION)
+        }
 
+    // TODO: ask system for this
     private var locationServiceActive = false
+    private var notificationServiceActive = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -54,19 +57,14 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, View.OnClickListen
         mapFragment.getMapAsync(this)
 
         // safe to call every time
+        // TODO: Application class
         createNotificationChannel()
 
         if (!checkPermissions()) {
             requestPermissions()
         }
 
-        broadcastReceiverIntentFilter.addAction(C.LOCATION_UPDATE_ACTION)
-        broadcastReceiverIntentFilter.addAction(C.LOCATION_SERVICE_START_ACTION)
-
-        start_stop_img_btn.setOnClickListener() {
-            buttonStartStopOnClick(it)
-        }
-
+        start_stop_img_btn.setOnClickListener(this)
         cp_img_btn.setOnClickListener(this)
         wp_img_btn.setOnClickListener(this)
     }
@@ -76,6 +74,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, View.OnClickListen
 
         LocalBroadcastManager.getInstance(this)
             .registerReceiver(broadcastReceiver, broadcastReceiverIntentFilter)
+
+        //setStartOrStopButton()
     }
 
     override fun onStop() {
@@ -84,51 +84,35 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, View.OnClickListen
         LocalBroadcastManager.getInstance(this).unregisterReceiver(broadcastReceiver)
     }
 
+/*    fun setStartOrStopButton() {
+        if (Utils.Service.areServicesRunning()) start_stop_img_btn.setImageResource(R.drawable.ic_stop)
+        else if (Utils.Service.areNotServicesRunning()) start_stop_img_btn.setImageResource(R.drawable.ic_play_arrow_black)
+    }*/
+
+    fun notifyLocationService(intent: Intent) {
+        Log.d(TAG, "Sending intent: ${intent.action}")
+
+        sendBroadcast(intent)
+    }
+
     override fun onClick(v: View?) {
+
         v?.let {
+
             when (it.id) {
-                R.id.start_stop_img_btn -> userEventsListener.onStartStop()
-                R.id.cp_img_btn -> userEventsListener.onCPClick()
-                R.id.wp_img_btn -> userEventsListener.onWPClick()
+                R.id.start_stop_img_btn -> {
+                    notifyLocationService(Intent(C.START_STOP_ACTION))
+                    buttonStartStopOnClick()
+                }
+                R.id.cp_img_btn -> {
+                    notifyLocationService(Intent(C.CP_ACTION))
+                }
+                R.id.wp_img_btn -> {
+                    notifyLocationService(Intent(C.WP_ACTION))
+                }
             }
+
         }
-    }
-
-
-    override fun onSessionDistance(distance: String) {
-        session_distance_text_view.text = "$distance"
-    }
-
-    override fun onSessionDuration(duration: String) {
-        session_duration_text_view.text = duration
-    }
-
-    override fun onSessionSpeed(speed: String) {
-        session_speed_text_view.text = speed
-    }
-
-    override fun onCpDistance(distance: String) {
-        distance_cp_text_view.text = distance
-    }
-
-    override fun onCpDirectDistance(distance: String) {
-        direct_distance_cp_text_view.text = distance
-    }
-
-    override fun onCpSpeed(speed: String) {
-        cp_speed_text_view.text = speed
-    }
-
-    override fun onWpDistance(distance: String) {
-        distance_wp_text_view.text = distance
-    }
-
-    override fun onWpDirectDistance(distance: String) {
-        direct_distance_wp_text_view.text = distance
-    }
-
-    override fun onWpSpeed(speed: String) {
-        wp_speed_text_view.text = speed
     }
 
     /**
@@ -193,10 +177,10 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, View.OnClickListen
                 "Displaying permission rationale to provide additional context."
             )
             Snackbar.make(
-                    findViewById(R.id.activity_main),
-                    "Hey, i really need to access GPS!",
-                    Snackbar.LENGTH_INDEFINITE
-                )
+                findViewById(R.id.activity_main),
+                "Hey, i really need to access GPS!",
+                Snackbar.LENGTH_INDEFINITE
+            )
                 .setAction("OK", View.OnClickListener {
                     // Request permission
                     ActivityCompat.requestPermissions(
@@ -235,10 +219,10 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, View.OnClickListen
                 Toast.makeText(this, "Permission was granted", Toast.LENGTH_SHORT).show()
             } else { // Permission denied.
                 Snackbar.make(
-                        findViewById(R.id.activity_main),
-                        "You denied GPS! What can I do?",
-                        Snackbar.LENGTH_INDEFINITE
-                    )
+                    findViewById(R.id.activity_main),
+                    "You denied GPS! What can I do?",
+                    Snackbar.LENGTH_INDEFINITE
+                )
                     .setAction("Settings", View.OnClickListener {
                         // Build intent that displays the App settings screen.
                         val intent = Intent()
@@ -257,8 +241,38 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, View.OnClickListen
     }
 
     // ============================================== CLICK HANDLERS =============================================
-    fun buttonStartStopOnClick(view: View) {
-        Log.d(TAG, "buttonStartStopOnClick. locationServiceActive: $locationServiceActive")
+    fun buttonStartStopOnClick() {
+        //Log.d(TAG, "buttonStartStopOnClick. locationServiceActive: $locationServiceActive")
+        // try to start/stop the background service
+        //userEventsListener.onStartStop()
+
+        if (locationServiceActive && notificationServiceActive) {
+
+            stopService(Intent(this, NotificationService::class.java))
+            stopService(Intent(this, LocationService::class.java))
+
+            //start_stop_img_btn.setImageResource(R.drawable.ic_play_arrow_black)
+        } else if (!locationServiceActive && !notificationServiceActive) {
+            if (Build.VERSION.SDK_INT >= 26) {
+                // starting the FOREGROUND service
+                // service has to display non-dismissable notification within 5 secs
+                startForegroundService(Intent(this, LocationService::class.java))
+                startForegroundService(Intent(this, NotificationService::class.java))
+            } else {
+                startService(Intent(this, LocationService::class.java))
+                startService(Intent(this, NotificationService::class.java))
+            }
+            //start_stop_img_btn.setImageResource(R.drawable.ic_stop)
+        } else {
+            Log.d(TAG, "One of the services is unintentionally running!")
+        }
+
+        //setStartOrStopButton()
+
+/*        notificationServiceActive = !notificationServiceActive
+        locationServiceActive = !locationServiceActive*/
+
+/*        Log.d(TAG, "buttonStartStopOnClick. locationServiceActive: $locationServiceActive")
         // try to start/stop the background service
         userEventsListener.onStartStop()
 
@@ -278,7 +292,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, View.OnClickListen
             start_stop_img_btn.setImageResource(R.drawable.ic_stop)
         }
 
-        locationServiceActive = !locationServiceActive
+        locationServiceActive = !locationServiceActive*/
     }
 
     // ============================================== BROADCAST RECEIVER =============================================
@@ -287,19 +301,38 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, View.OnClickListen
             Log.d(TAG, intent!!.action)
             when (intent!!.action) {
                 C.LOCATION_UPDATE_ACTION -> {
-                    val location = intent.getParcelableExtra<Location>(C.LOCATION_UPDATE_ACTION_LOCATION)
-                    location?.let {
-                        navigationEventsListener.onNewLocation(it)
-                    }
-/*                    val latitude =
-                        intent.getDoubleExtra(C.LOCATION_UPDATE_ACTION_LATITUDE, 0.0)
-                    val longitude =
-                        intent.getDoubleExtra(C.LOCATION_UPDATE_ACTION_LONGITUDE, 0.0)
+                    val navigationData =
+                        intent.getParcelableExtra<NavigationData>(C.NAVIGATION_DATA_UPDATE_KEY)
 
-                    navigationEventsListener.onNewLocation(latitude, longitude)
-                    */
+                    navigationData?.run {
+                        session_distance_text_view.text = sessionDistance()
+                        session_duration_text_view.text = sessionDuration()
+                        session_speed_text_view.text = sessionSpeed()
+                        distance_cp_text_view.text = cpDistance()
+                        direct_distance_cp_text_view.text = cpDirectDistance()
+                        cp_speed_text_view.text = cpSpeed()
+                        distance_wp_text_view.text = wpDistance()
+                        direct_distance_wp_text_view.text = wpDirectDistance()
+                        wp_speed_text_view.text = wpSpeed()
+                    }
+
+                    val location = intent.getParcelableExtra<Location>(C.LOCATION_UPDATE_KEY)
+                    Log.d(TAG, "New location: ${location}")
                 }
-                C.LOCATION_SERVICE_START_ACTION -> navigationEventsListener.onStart()
+                C.LOCATION_SERVICE_START_ACTION -> {
+                    Log.d(TAG, "Location service started!")
+                    notificationServiceActive = !notificationServiceActive
+                    locationServiceActive = !locationServiceActive
+
+                    start_stop_img_btn.setImageResource(R.drawable.ic_stop)
+                }
+                C.LOCATION_SERVICE_STOP_ACTION -> {
+                    Log.d(TAG, "Location service stopped!")
+                    notificationServiceActive = !notificationServiceActive
+                    locationServiceActive = !locationServiceActive
+
+                    start_stop_img_btn.setImageResource(R.drawable.ic_play_arrow_black)
+                }
             }
         }
     }

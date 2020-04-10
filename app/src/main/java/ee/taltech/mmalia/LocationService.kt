@@ -5,22 +5,24 @@ import android.content.Intent
 import android.os.IBinder
 import android.os.Looper
 import android.util.Log
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.google.android.gms.location.*
 
 class LocationService : Service() {
 
     companion object {
         private val TAG = this::class.java.declaringClass!!.simpleName
+
+        private var running = false
+
+        fun isRunning() = running
     }
 
-    private val mapNavigation = LocationManager()
+    private lateinit var locationServiceManager: LocationServiceManager
 
     // The desired intervals for location updates. Inexact. Updates may be more or less frequent.
     private val UPDATE_INTERVAL_IN_MILLISECONDS: Long = 2000
     private val FASTEST_UPDATE_INTERVAL_IN_MILLISECONDS = UPDATE_INTERVAL_IN_MILLISECONDS / 2
-
-//    private val broadcastReceiver = NotificationBroadcastReceiver()
-    //private val broadcastReceiverIntentFilter: IntentFilter = IntentFilter()
 
     private val mLocationRequest: LocationRequest = LocationRequest()
     private lateinit var mFusedLocationClient: FusedLocationProviderClient
@@ -29,20 +31,20 @@ class LocationService : Service() {
     override fun onCreate() {
         Log.d(TAG, "onCreate")
         super.onCreate()
-//
-//        broadcastReceiverIntentFilter.addAction(C.NOTIFICATION_ACTION_CP)
-//        broadcastReceiverIntentFilter.addAction(C.NOTIFICATION_ACTION_WP)
-//        broadcastReceiverIntentFilter.addAction(C.LOCATION_UPDATE_ACTION)
 
-        registerReceiver(mapNavigation.notification.broadcastReceiver, mapNavigation.notification.intentFilter)
+        locationServiceManager = LocationServiceManager(this)
+
+        registerReceiver(
+            locationServiceManager.broadcastReceiver,
+            locationServiceManager.intentFilter
+        )
 
         mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
         mLocationCallback = object : LocationCallback() {
             override fun onLocationResult(locationResult: LocationResult) {
                 super.onLocationResult(locationResult)
-                mapNavigation.onNewLocation(locationResult.lastLocation)
-                //onNewLocation(locationResult.lastLocation)
+                locationServiceManager.onNewLocation(locationResult.lastLocation)
             }
         }
 
@@ -51,6 +53,9 @@ class LocationService : Service() {
         createLocationRequest()
         requestLocationUpdates()
 
+        running = true
+
+        sendBroadcast(Intent(C.LOCATION_SERVICE_START_ACTION))
     }
 
     fun requestLocationUpdates() {
@@ -80,16 +85,17 @@ class LocationService : Service() {
     private fun getLastLocation() {
         try {
             mFusedLocationClient.lastLocation
-                .addOnCompleteListener { task -> if (task.isSuccessful) {
-                    Log.w(TAG, "task successfull");
-                    if (task.result != null){
-                        mapNavigation.onNewLocation(task.result!!)
-//                        onNewLocation(task.result!!)
-                    }
-                } else {
+                .addOnCompleteListener { task ->
+                    if (task.isSuccessful) {
+                        Log.w(TAG, "task successfull");
+                        if (task.result != null) {
+                            locationServiceManager.onNewLocation(task.result!!)
+                        }
+                    } else {
 
-                    Log.w(TAG, "Failed to get location." + task.exception)
-                }}
+                        Log.w(TAG, "Failed to get location." + task.exception)
+                    }
+                }
         } catch (unlikely: SecurityException) {
             Log.e(TAG, "Lost location permission.$unlikely")
         }
@@ -100,13 +106,13 @@ class LocationService : Service() {
         Log.d(TAG, "onDestroy")
         super.onDestroy()
 
+        LocalBroadcastManager.getInstance(this).sendBroadcast(Intent(C.LOCATION_SERVICE_STOP_ACTION))
+        locationServiceManager.onStop()
+
         //stop location updates
         mFusedLocationClient.removeLocationUpdates(mLocationCallback)
-
         // don't forget to unregister brodcast receiver!!!!
-        unregisterReceiver(mapNavigation.notification.broadcastReceiver)
-
-        mapNavigation.onStop()
+        unregisterReceiver(locationServiceManager.broadcastReceiver)
     }
 
     override fun onLowMemory() {
@@ -117,7 +123,10 @@ class LocationService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         Log.d(TAG, "onStartCommand")
 
-        mapNavigation.onStart(this)
+        //sendBroadcast(Intent(C.LOCATION_SERVICE_START_ACTION))
+        LocalBroadcastManager.getInstance(this).sendBroadcast(Intent(C.LOCATION_SERVICE_START_ACTION))
+
+        locationServiceManager.onStart()
 
         return START_STICKY
     }

@@ -50,6 +50,13 @@
             android:foregroundServiceType="location"
             android:launchMode="singleTask" />
 
+        <service
+            android:name=".NotificationService"
+            android:enabled="true"
+            android:exported="true"
+            android:foregroundServiceType="dataSync"
+            android:launchMode="singleTask" />
+
     </application>
 
 </manifest>

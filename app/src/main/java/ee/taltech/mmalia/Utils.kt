@@ -32,4 +32,13 @@ class Utils {
             }
         }
     }
+
+    class Service {
+
+        companion object {
+            fun areServicesRunning() = LocationService.isRunning() && NotificationService.isRunning()
+            fun areNotServicesRunning() = !LocationService.isRunning() && !NotificationService.isRunning()
+        }
+
+    }
 }

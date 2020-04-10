@@ -1,39 +1,40 @@
 package ee.taltech.mmalia
 
 import android.location.Location
+import android.os.Parcel
+import android.os.Parcelable
 import android.util.Log
 import ee.taltech.mmalia.Utils.NavigationData.Companion.distance
 import ee.taltech.mmalia.Utils.NavigationData.Companion.duration
 import ee.taltech.mmalia.Utils.NavigationData.Companion.speed
 
-interface NavigationEventsListener {
-    fun onStart()
-    fun onNewLocation(location: Location)
+
+interface NavigationDataUi {
+
+    fun sessionDistance(): String
+    fun sessionDuration(): String
+    fun sessionSpeed(): String
+    fun cpDistance(): String
+    fun cpDirectDistance(): String
+    fun cpSpeed(): String
+    fun wpDistance(): String
+    fun wpDirectDistance(): String
+    fun wpSpeed(): String
 }
 
-interface UserEventsListener {
-    fun onStartStop()
-    fun onCPClick()
-    fun onWPClick()
-}
+class NavigationData() : NavigationDataUi, Parcelable {
 
-interface NavigationDataUpdatesListener {
-    fun onSessionDistance(distance: String)
-    fun onSessionDuration(duration: String)
-    fun onSessionSpeed(speed: String)
-    fun onCpDistance(distance: String)
-    fun onCpDirectDistance(distance: String)
-    fun onCpSpeed(speed: String)
-    fun onWpDistance(distance: String)
-    fun onWpDirectDistance(distance: String)
-    fun onWpSpeed(speed: String)
-}
+    companion object CREATOR : Parcelable.Creator<NavigationData> {
 
-class NavigationData(val updatesListener: NavigationDataUpdatesListener) : NavigationEventsListener,
-    UserEventsListener {
-
-    companion object {
         private val TAG = this::class.java.declaringClass!!.simpleName
+
+        override fun createFromParcel(parcel: Parcel): NavigationData {
+            return NavigationData(parcel)
+        }
+
+        override fun newArray(size: Int): Array<NavigationData?> {
+            return arrayOfNulls(size)
+        }
     }
 
     // last received location
@@ -59,79 +60,70 @@ class NavigationData(val updatesListener: NavigationDataUpdatesListener) : Navig
     var wpDistanceDirect = 0f
     var wpSpeed = 0f
 
-    override fun onStart() {
-        Log.d(TAG, "Location service started")
+    constructor(parcel: Parcel) : this() {
+        currentLocation = parcel.readParcelable(Location::class.java.classLoader)
+        startLocation = parcel.readParcelable(Location::class.java.classLoader)
+        sessionStartTime = parcel.readLong()
+        sessionDistance = parcel.readFloat()
+        sessionDuration = parcel.readLong()
+        sessionSpeed = parcel.readFloat()
+        cpLocation = parcel.readParcelable(Location::class.java.classLoader)
+        cpStartTime = parcel.readLong()
+        cpDuration = parcel.readLong()
+        cpDistance = parcel.readFloat()
+        cpDistanceDirect = parcel.readFloat()
+        cpSpeed = parcel.readFloat()
+        wpLocation = parcel.readParcelable(Location::class.java.classLoader)
+        wpStartTime = parcel.readLong()
+        wpDuration = parcel.readLong()
+        wpDistance = parcel.readFloat()
+        wpDistanceDirect = parcel.readFloat()
+        wpSpeed = parcel.readFloat()
     }
 
     fun isFirstLocation() = startLocation == null
 
-    override fun onNewLocation(location: Location) {
-        Log.d(TAG, "New location arrived")
-
-        if (isFirstLocation()) {
-            startLocation = location
-            cpLocation = location
-            wpLocation = location
-            sessionStartTime = location.time
-            cpStartTime = location.time
-            wpStartTime = location.time
-        } else {
-            sessionDistance = distance(startLocation!!, location)
-            sessionDuration = location.time - sessionStartTime
-            sessionSpeed = speed(sessionDistance, sessionDuration)
-
-            cpDistance += distance(currentLocation!!, location)
-            cpDuration = location.time - cpStartTime
-            cpDistanceDirect = distance(cpLocation!!, location)
-            cpSpeed = speed(cpDistance, cpDuration)
-
-            wpDistance += distance(currentLocation!!, location)
-            wpDuration = location.time - wpStartTime
-            wpDistanceDirect = distance(wpLocation!!, location)
-            wpSpeed = speed(wpDistance, wpDuration)
-        }
-
-        notifyListener()
-        currentLocation = location
+    override fun writeToParcel(parcel: Parcel, flags: Int) {
+        parcel.writeParcelable(currentLocation, flags)
+        parcel.writeParcelable(startLocation, flags)
+        parcel.writeLong(sessionStartTime)
+        parcel.writeFloat(sessionDistance)
+        parcel.writeLong(sessionDuration)
+        parcel.writeFloat(sessionSpeed)
+        parcel.writeParcelable(cpLocation, flags)
+        parcel.writeLong(cpStartTime)
+        parcel.writeLong(cpDuration)
+        parcel.writeFloat(cpDistance)
+        parcel.writeFloat(cpDistanceDirect)
+        parcel.writeFloat(cpSpeed)
+        parcel.writeParcelable(wpLocation, flags)
+        parcel.writeLong(wpStartTime)
+        parcel.writeLong(wpDuration)
+        parcel.writeFloat(wpDistance)
+        parcel.writeFloat(wpDistanceDirect)
+        parcel.writeFloat(wpSpeed)
     }
 
-    private fun notifyListener() {
-        updatesListener.onSessionDistance(distance(sessionDistance))
-        updatesListener.onSessionDuration(duration(sessionDuration))
-        updatesListener.onSessionSpeed(speed(sessionSpeed))
-
-        updatesListener.onCpDistance(distance(cpDistance))
-        updatesListener.onCpDirectDistance(distance(cpDistanceDirect))
-        updatesListener.onCpSpeed(speed(cpSpeed))
-
-        updatesListener.onWpDistance(distance(wpDistance))
-        updatesListener.onWpDirectDistance(distance(wpDistanceDirect))
-        updatesListener.onWpSpeed(speed(wpSpeed))
+    override fun describeContents(): Int {
+        return 0
     }
 
-    override fun onStartStop() {
-        Log.d(TAG, "Start/Stop clicked")
-    }
+    override fun sessionDistance(): String = distance(sessionDistance)
 
-    override fun onCPClick() {
-        Log.d(TAG, "CP clicked")
+    override fun sessionDuration(): String = duration(sessionDuration)
 
-        cpStartTime = currentLocation!!.time
-        cpLocation = currentLocation
-        cpDistance = 0F
-        cpDistanceDirect = 0F
-        cpDuration = 0L
-        cpSpeed = 0F
-    }
+    override fun sessionSpeed(): String = speed(sessionSpeed)
 
-    override fun onWPClick() {
-        Log.d(TAG, "WP clicked")
+    override fun cpDistance(): String = distance(cpDistance)
 
-        wpStartTime = currentLocation!!.time
-        wpLocation = currentLocation
-        wpDistance = 0F
-        wpDistanceDirect = 0F
-        wpDuration = 0L
-        wpSpeed = 0F
-    }
+    override fun cpDirectDistance(): String = distance(cpDistanceDirect)
+
+    override fun cpSpeed(): String = speed(cpSpeed)
+
+    override fun wpDistance(): String = distance(wpDistance)
+
+    override fun wpDirectDistance(): String = distance(wpDistanceDirect)
+
+    override fun wpSpeed(): String = speed(wpSpeed)
+
 }
