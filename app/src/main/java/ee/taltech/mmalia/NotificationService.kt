@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.IBinder
+import android.util.Log
 import androidx.core.app.NotificationManagerCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 
@@ -15,15 +16,19 @@ class NotificationService : Service() {
     companion object {
         private val TAG = this::class.java.declaringClass!!.simpleName
 
-        private var running = false
-
-        fun isRunning() = running
+        var running = false
+            private set
     }
 
     lateinit var notification: Notification
 
     val broadcastReceiver = NotificationBroadcastReceiver()
-    val intentFilter = IntentFilter().apply { addAction(C.LOCATION_UPDATE_ACTION) }
+    val intentFilter = IntentFilter().apply {
+        addAction(C.START_STOP_ACTION)
+        addAction(C.CP_ACTION)
+        addAction(C.WP_ACTION)
+        addAction(C.LOCATION_UPDATE_ACTION)
+    }
 
     override fun onCreate() {
         super.onCreate()
@@ -31,8 +36,8 @@ class NotificationService : Service() {
         notification = NavigationNotification.create(applicationContext, NavigationData())
         startForeground(C.NOTIFICATION_NAVIGATION_ID, notification)
 
-        LocalBroadcastManager.getInstance(applicationContext)
-            .registerReceiver(broadcastReceiver, intentFilter)
+        LocalBroadcastManager.getInstance(this).registerReceiver(broadcastReceiver, intentFilter)
+        registerReceiver(broadcastReceiver, intentFilter)
 
         running = true
     }
@@ -43,9 +48,8 @@ class NotificationService : Service() {
         // remove notifications
         NotificationManagerCompat.from(this).cancel(C.NOTIFICATION_NAVIGATION_ID)
 
-        LocalBroadcastManager
-            .getInstance(this)
-            .unregisterReceiver(broadcastReceiver)
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(broadcastReceiver)
+        unregisterReceiver(broadcastReceiver)
 
         running = false
     }
@@ -72,6 +76,16 @@ class NotificationService : Service() {
                                 NavigationNotification.create(applicationContext, it)
                             )
                         }
+                }
+                C.START_STOP_ACTION -> {
+                    Log.d(TAG, "Start/Stop clicked")
+                    stopSelf()
+                }
+                C.CP_ACTION -> {
+                    Log.d(TAG, "CP clicked")
+                }
+                C.WP_ACTION -> {
+                    Log.d(TAG, "WP clicked")
                 }
             }
         }

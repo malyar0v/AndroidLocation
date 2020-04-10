@@ -40,16 +40,12 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, View.OnClickListen
     private val broadcastReceiverIntentFilter: IntentFilter = IntentFilter()
         .apply {
             addAction(C.LOCATION_UPDATE_ACTION)
-            addAction(C.LOCATION_SERVICE_START_ACTION)
-            addAction(C.LOCATION_SERVICE_STOP_ACTION)
         }
-
-    // TODO: ask system for this
-    private var locationServiceActive = false
-    private var notificationServiceActive = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        Log.d(TAG, "onCreate")
+
         setContentView(R.layout.activity_main)
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         val mapFragment = supportFragmentManager
@@ -71,23 +67,23 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, View.OnClickListen
 
     override fun onResume() {
         super.onResume()
+        Log.d(TAG, "onResume")
 
         LocalBroadcastManager.getInstance(this)
             .registerReceiver(broadcastReceiver, broadcastReceiverIntentFilter)
 
-        //setStartOrStopButton()
+        if (LocationService.running && NotificationService.running) setStartStopButton(R.drawable.ic_stop)
+        else setStartStopButton(R.drawable.ic_play_arrow_black)
     }
 
     override fun onStop() {
         super.onStop()
+        Log.d(TAG, "onStop")
 
         LocalBroadcastManager.getInstance(this).unregisterReceiver(broadcastReceiver)
     }
 
-/*    fun setStartOrStopButton() {
-        if (Utils.Service.areServicesRunning()) start_stop_img_btn.setImageResource(R.drawable.ic_stop)
-        else if (Utils.Service.areNotServicesRunning()) start_stop_img_btn.setImageResource(R.drawable.ic_play_arrow_black)
-    }*/
+    fun setStartStopButton(resourceId: Int) = start_stop_img_btn.setImageResource(resourceId)
 
     fun notifyLocationService(intent: Intent) {
         Log.d(TAG, "Sending intent: ${intent.action}")
@@ -242,17 +238,14 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, View.OnClickListen
 
     // ============================================== CLICK HANDLERS =============================================
     fun buttonStartStopOnClick() {
-        //Log.d(TAG, "buttonStartStopOnClick. locationServiceActive: $locationServiceActive")
-        // try to start/stop the background service
-        //userEventsListener.onStartStop()
 
-        if (locationServiceActive && notificationServiceActive) {
+        if (LocationService.running && NotificationService.running) {
 
             stopService(Intent(this, NotificationService::class.java))
             stopService(Intent(this, LocationService::class.java))
 
-            //start_stop_img_btn.setImageResource(R.drawable.ic_play_arrow_black)
-        } else if (!locationServiceActive && !notificationServiceActive) {
+            setStartStopButton(R.drawable.ic_play_arrow_black)
+        } else if (!LocationService.running && !NotificationService.running) {
             if (Build.VERSION.SDK_INT >= 26) {
                 // starting the FOREGROUND service
                 // service has to display non-dismissable notification within 5 secs
@@ -262,41 +255,15 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, View.OnClickListen
                 startService(Intent(this, LocationService::class.java))
                 startService(Intent(this, NotificationService::class.java))
             }
-            //start_stop_img_btn.setImageResource(R.drawable.ic_stop)
+            setStartStopButton(R.drawable.ic_stop)
         } else {
             Log.d(TAG, "One of the services is unintentionally running!")
         }
-
-        //setStartOrStopButton()
-
-/*        notificationServiceActive = !notificationServiceActive
-        locationServiceActive = !locationServiceActive*/
-
-/*        Log.d(TAG, "buttonStartStopOnClick. locationServiceActive: $locationServiceActive")
-        // try to start/stop the background service
-        userEventsListener.onStartStop()
-
-        if (locationServiceActive) {
-            // stopping the service
-            stopService(Intent(this, LocationService::class.java))
-
-            start_stop_img_btn.setImageResource(R.drawable.ic_play_arrow_black)
-        } else {
-            if (Build.VERSION.SDK_INT >= 26) {
-                // starting the FOREGROUND service
-                // service has to display non-dismissable notification within 5 secs
-                startForegroundService(Intent(this, LocationService::class.java))
-            } else {
-                startService(Intent(this, LocationService::class.java))
-            }
-            start_stop_img_btn.setImageResource(R.drawable.ic_stop)
-        }
-
-        locationServiceActive = !locationServiceActive*/
     }
 
     // ============================================== BROADCAST RECEIVER =============================================
     private inner class InnerBroadcastReceiver : BroadcastReceiver() {
+
         override fun onReceive(context: Context?, intent: Intent?) {
             Log.d(TAG, intent!!.action)
             when (intent!!.action) {
@@ -318,20 +285,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, View.OnClickListen
 
                     val location = intent.getParcelableExtra<Location>(C.LOCATION_UPDATE_KEY)
                     Log.d(TAG, "New location: ${location}")
-                }
-                C.LOCATION_SERVICE_START_ACTION -> {
-                    Log.d(TAG, "Location service started!")
-                    notificationServiceActive = !notificationServiceActive
-                    locationServiceActive = !locationServiceActive
-
-                    start_stop_img_btn.setImageResource(R.drawable.ic_stop)
-                }
-                C.LOCATION_SERVICE_STOP_ACTION -> {
-                    Log.d(TAG, "Location service stopped!")
-                    notificationServiceActive = !notificationServiceActive
-                    locationServiceActive = !locationServiceActive
-
-                    start_stop_img_btn.setImageResource(R.drawable.ic_play_arrow_black)
                 }
             }
         }

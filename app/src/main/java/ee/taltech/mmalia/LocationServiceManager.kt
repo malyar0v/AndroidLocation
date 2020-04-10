@@ -28,8 +28,6 @@ class LocationServiceManager(val locationService: LocationService) : LocationSer
 
     val broadcastReceiver = UserEventsBroadcastReceiver()
     val intentFilter = IntentFilter().apply {
-        addAction(C.LOCATION_SERVICE_START_ACTION)
-        addAction(C.LOCATION_SERVICE_STOP_ACTION)
         addAction(C.START_STOP_ACTION)
         addAction(C.CP_ACTION)
         addAction(C.WP_ACTION)
@@ -39,6 +37,7 @@ class LocationServiceManager(val locationService: LocationService) : LocationSer
 
     override fun onStart() {
         locationService.startForeground(C.NOTIFICATION_LOCATION_ACTIVE_ID, LocationActiveNotification.create(context))
+        broadcastReceiver.onStart()
     }
 
     override fun onNewLocation(location: Location) {
@@ -80,30 +79,51 @@ class LocationServiceManager(val locationService: LocationService) : LocationSer
 
     override fun onStop() {
         // remove notifications
+        broadcastReceiver.onStop()
         NotificationManagerCompat.from(context).cancel(C.NOTIFICATION_LOCATION_ACTIVE_ID)
     }
 
     inner class UserEventsBroadcastReceiver : BroadcastReceiver() {
 
+        fun onStart() {
+            Log.d(TAG, "Location service is started")
+            navigationData = NavigationData()
+        }
+
+        fun onStop() {
+            Log.d(TAG, "Location service is stopped")
+        }
+
         override fun onReceive(context: Context?, intent: Intent?) {
             Log.d(TAG, intent!!.action)
             when (intent!!.action) {
-                C.LOCATION_SERVICE_START_ACTION -> {
-                    Log.d(TAG, "Location service started by the user")
-                    navigationData = NavigationData()
-
-                }
-                C.LOCATION_SERVICE_STOP_ACTION -> {
-                    Log.d(TAG, "Location service stopped by the user")
-                }
                 C.START_STOP_ACTION -> {
                     Log.d(TAG, "Start/Stop clicked")
+                    locationService.stopSelf()
                 }
                 C.CP_ACTION -> {
                     Log.d(TAG, "CP clicked")
+
+                    navigationData.apply {
+                        cpStartTime = currentLocation!!.time
+                        cpLocation = currentLocation
+                        cpDistance = 0F
+                        cpDistanceDirect = 0F
+                        cpDuration = 0L
+                        cpSpeed = 0F
+                    }
                 }
                 C.WP_ACTION -> {
                     Log.d(TAG, "WP clicked")
+
+                    navigationData.apply {
+                        wpStartTime = currentLocation!!.time
+                        wpLocation = currentLocation
+                        wpDistance = 0F
+                        wpDistanceDirect = 0F
+                        wpDuration = 0L
+                        wpSpeed = 0F
+                    }
                 }
             }
         }

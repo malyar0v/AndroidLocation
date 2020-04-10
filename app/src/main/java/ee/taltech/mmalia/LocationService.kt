@@ -13,9 +13,8 @@ class LocationService : Service() {
     companion object {
         private val TAG = this::class.java.declaringClass!!.simpleName
 
-        private var running = false
-
-        fun isRunning() = running
+        var running = false
+            private set
     }
 
     private lateinit var locationServiceManager: LocationServiceManager
@@ -54,8 +53,6 @@ class LocationService : Service() {
         requestLocationUpdates()
 
         running = true
-
-        sendBroadcast(Intent(C.LOCATION_SERVICE_START_ACTION))
     }
 
     fun requestLocationUpdates() {
@@ -106,13 +103,14 @@ class LocationService : Service() {
         Log.d(TAG, "onDestroy")
         super.onDestroy()
 
-        LocalBroadcastManager.getInstance(this).sendBroadcast(Intent(C.LOCATION_SERVICE_STOP_ACTION))
         locationServiceManager.onStop()
 
         //stop location updates
         mFusedLocationClient.removeLocationUpdates(mLocationCallback)
         // don't forget to unregister brodcast receiver!!!!
         unregisterReceiver(locationServiceManager.broadcastReceiver)
+
+        running = false
     }
 
     override fun onLowMemory() {
@@ -123,8 +121,8 @@ class LocationService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         Log.d(TAG, "onStartCommand")
 
-        //sendBroadcast(Intent(C.LOCATION_SERVICE_START_ACTION))
-        LocalBroadcastManager.getInstance(this).sendBroadcast(Intent(C.LOCATION_SERVICE_START_ACTION))
+        sendBroadcast(Intent(C.LOCATION_SERVICE_START_ACTION))
+        //LocalBroadcastManager.getInstance(this).sendBroadcast(Intent(C.LOCATION_SERVICE_START_ACTION))
 
         locationServiceManager.onStart()
 
@@ -134,17 +132,6 @@ class LocationService : Service() {
     override fun onBind(intent: Intent?): IBinder? {
         Log.d(TAG, "onBind")
         TODO("not implemented")
-    }
-
-    override fun onRebind(intent: Intent?) {
-        Log.d(TAG, "onRebind")
-        super.onRebind(intent)
-    }
-
-    override fun onUnbind(intent: Intent?): Boolean {
-        Log.d(TAG, "onUnbind")
-        return super.onUnbind(intent)
-
     }
 
 }

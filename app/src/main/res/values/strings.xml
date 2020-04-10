@@ -8,13 +8,13 @@
     <string name="controls_options">Options</string>
 
     <!-- Map navigation -->
-    <string name="session_distance_placeholder">5 000</string>
-    <string name="session_duration_placeholder">0:32:15</string>
-    <string name="session_speed_placeholder">7:38</string>
-    <string name="distance_cp_to_current_placeholder">763</string>
-    <string name="direct_distance_cp_to_current_placeholder">454</string>
-    <string name="cp_speed_placeholder">8:58</string>
-    <string name="distance_wp_to_current_placeholder">2 268</string>
-    <string name="direct_distance_wp_to_current_placeholder">1 500</string>
-    <string name="wp_speed_placeholder">8:09</string>
+    <string name="session_distance_placeholder">----</string>
+    <string name="session_duration_placeholder">-:--:--</string>
+    <string name="session_speed_placeholder">-:--</string>
+    <string name="distance_cp_to_current_placeholder">---</string>
+    <string name="direct_distance_cp_to_current_placeholder">---</string>
+    <string name="cp_speed_placeholder">-:--</string>
+    <string name="distance_wp_to_current_placeholder">- ---</string>
+    <string name="direct_distance_wp_to_current_placeholder">- ---</string>
+    <string name="wp_speed_placeholder">-:--</string>
 </resources>
