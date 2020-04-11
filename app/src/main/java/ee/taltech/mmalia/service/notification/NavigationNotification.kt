@@ -1,4 +1,4 @@
-package ee.taltech.mmalia
+package ee.taltech.mmalia.service.notification
 
 import android.app.Notification
 import android.app.PendingIntent
@@ -6,6 +6,9 @@ import android.content.Context
 import android.content.Intent
 import android.widget.RemoteViews
 import androidx.core.app.NotificationCompat
+import ee.taltech.mmalia.C
+import ee.taltech.mmalia.model.NavigationDataUi
+import ee.taltech.mmalia.R
 
 class NavigationNotification {
 

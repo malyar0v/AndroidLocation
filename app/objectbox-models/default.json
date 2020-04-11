@@ -1,0 +1,86 @@
+{
+  "_note1": "KEEP THIS FILE! Check it into a version control system (VCS) like git.",
+  "_note2": "ObjectBox manages crucial IDs for your object model. See docs for details.",
+  "_note3": "If you have VCS merge conflicts, you must resolve them according to ObjectBox docs.",
+  "entities": [
+    {
+      "id": "1:6867873421291126511",
+      "lastPropertyId": "2:3478288559294192949",
+      "name": "Session",
+      "properties": [
+        {
+          "id": "1:4855935648829291745",
+          "name": "id",
+          "type": 6,
+          "flags": 1
+        },
+        {
+          "id": "2:3478288559294192949",
+          "name": "start",
+          "type": 6,
+          "flags": 4
+        }
+      ],
+      "relations": [
+        {
+          "id": "1:4822726741234533100",
+          "name": "locations",
+          "targetId": "2:8561800046678973377"
+        },
+        {
+          "id": "2:2079050897507899610",
+          "name": "checkpoints",
+          "targetId": "2:8561800046678973377"
+        },
+        {
+          "id": "3:3648521574447309966",
+          "name": "waypoints",
+          "targetId": "2:8561800046678973377"
+        }
+      ]
+    },
+    {
+      "id": "2:8561800046678973377",
+      "lastPropertyId": "4:7419907063779690672",
+      "name": "SimpleLocation",
+      "properties": [
+        {
+          "id": "1:849961549849009800",
+          "name": "id",
+          "type": 6,
+          "flags": 1
+        },
+        {
+          "id": "2:2167956924514585204",
+          "name": "latitude",
+          "type": 8,
+          "flags": 4
+        },
+        {
+          "id": "3:7152477630587425204",
+          "name": "longitude",
+          "type": 8,
+          "flags": 4
+        },
+        {
+          "id": "4:7419907063779690672",
+          "name": "time",
+          "type": 6,
+          "flags": 4
+        }
+      ],
+      "relations": []
+    }
+  ],
+  "lastEntityId": "2:8561800046678973377",
+  "lastIndexId": "0:0",
+  "lastRelationId": "3:3648521574447309966",
+  "lastSequenceId": "0:0",
+  "modelVersion": 5,
+  "modelVersionParserMinimum": 5,
+  "retiredEntityUids": [],
+  "retiredIndexUids": [],
+  "retiredPropertyUids": [],
+  "retiredRelationUids": [],
+  "version": 1
+}

@@ -1,11 +1,14 @@
 <resources>
     <!-- App -->
     <string name="app_name">iti0213-2019s-hw2</string>
-    <string name="title_activity_maps">HW2</string>
+
+    <string name="title_activity_main">Navigation</string>
+    <string name="title_activity_session">Sessions</string>
+
     <string name="controls_map_mode">North-Up</string>
     <string name="controls_reset">Reset</string>
     <string name="controls_compass">Compass</string>
-    <string name="controls_options">Options</string>
+    <string name="controls_sessions">Sessions</string>
 
     <!-- Map navigation -->
     <string name="session_distance_placeholder">----</string>
@@ -17,4 +20,13 @@
     <string name="distance_wp_to_current_placeholder">- ---</string>
     <string name="direct_distance_wp_to_current_placeholder">- ---</string>
     <string name="wp_speed_placeholder">-:--</string>
+    <string name="session_label_start_time">"Start time: "</string>
+    <string name="session_label_end_time">"End time: "</string>
+    <string name="datetime_placeholder">--:--:-- | --/--/----</string>
+    <string name="session_label_locations">"Locations: "</string>
+    <string name="session_label_locations_placeholder">0</string>
+    <string name="session_label_checkpoints_placeholder">0</string>
+    <string name="session_label_waypoints_placeholder">0</string>
+    <string name="session_label_checkpoints">"Checkpoints: "</string>
+    <string name="session_label_waypoints">"Waypoints: "</string>
 </resources>

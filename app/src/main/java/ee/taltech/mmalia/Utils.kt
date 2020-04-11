@@ -11,12 +11,13 @@ class Utils {
         companion object {
 
             const val PATTERN = "H:mm:ss"
-            val FORMATTER = SimpleDateFormat(PATTERN).apply { timeZone = TimeZone.getTimeZone("GMT") }
+            val TIME_FORMATTER =
+                SimpleDateFormat(PATTERN).apply { timeZone = TimeZone.getTimeZone("GMT") }
 
             fun distance(from: Location, to: Location) = from.distanceTo(to)
             fun distance(meters: Float) = "%.1f".format(meters)
 
-            fun duration(millis: Long) = FORMATTER.format(Date(millis))
+            fun duration(millis: Long) = TIME_FORMATTER.format(Date(millis))
 
             fun speed(distance: Float, time: Long) =
                 1 / ((distance / 1000f) / (time / (1000 * 60f)))
@@ -31,5 +32,12 @@ class Utils {
                 return "${mins}:${secs}"
             }
         }
+    }
+
+    object Session {
+
+        private const val DATE_TIME_PATTERN = "HH:mm:ss | dd/MM/YYYY"
+        val DATE_TIME_FORMATTER =
+            SimpleDateFormat(DATE_TIME_PATTERN)
     }
 }

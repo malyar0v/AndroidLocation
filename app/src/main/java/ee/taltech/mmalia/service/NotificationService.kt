@@ -1,4 +1,4 @@
-package ee.taltech.mmalia
+package ee.taltech.mmalia.service
 
 import android.app.Notification
 import android.app.Service
@@ -10,6 +10,9 @@ import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationManagerCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
+import ee.taltech.mmalia.C
+import ee.taltech.mmalia.model.NavigationData
+import ee.taltech.mmalia.service.notification.NavigationNotification
 
 class NotificationService : Service() {
 
@@ -33,7 +36,10 @@ class NotificationService : Service() {
     override fun onCreate() {
         super.onCreate()
 
-        notification = NavigationNotification.create(applicationContext, NavigationData())
+        notification = NavigationNotification.create(
+            applicationContext,
+            NavigationData()
+        )
         startForeground(C.NOTIFICATION_NAVIGATION_ID, notification)
 
         LocalBroadcastManager.getInstance(this).registerReceiver(broadcastReceiver, intentFilter)
@@ -44,6 +50,8 @@ class NotificationService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
+
+        broadcastReceiver.onServiceStop()
 
         // remove notifications
         NotificationManagerCompat.from(this).cancel(C.NOTIFICATION_NAVIGATION_ID)
@@ -60,20 +68,36 @@ class NotificationService : Service() {
 
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+
+        broadcastReceiver.onServiceStart()
+
         return START_STICKY
     }
 
     open inner class NotificationBroadcastReceiver : BroadcastReceiver() {
 
+        fun onServiceStart() {
+
+        }
+
+        fun onServiceStop() {
+
+        }
+
         override fun onReceive(context: Context?, intent: Intent?) {
             when (intent!!.action) {
                 C.LOCATION_UPDATE_ACTION -> {
 
-                    intent.getParcelableExtra<NavigationData>(C.NAVIGATION_DATA_UPDATE_KEY)
+                    intent.getParcelableExtra<NavigationData>(
+                        C.NAVIGATION_DATA_UPDATE_KEY
+                    )
                         ?.let {
                             startForeground(
                                 C.NOTIFICATION_NAVIGATION_ID,
-                                NavigationNotification.create(applicationContext, it)
+                                NavigationNotification.create(
+                                    applicationContext,
+                                    it
+                                )
                             )
                         }
                 }
