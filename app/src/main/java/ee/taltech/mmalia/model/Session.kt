@@ -10,7 +10,8 @@ class Session {
     @Id
     var id: Long = 0
 
-    val start: Long
+    var title: String = "Title"
+    val start: Long = Date().time
 
     lateinit var locations: MutableList<SimpleLocation>
     lateinit var checkpoints: MutableList<SimpleLocation>
@@ -24,10 +25,6 @@ class Session {
                 start
             }
         }
-
-    init {
-        start = Date().time
-    }
 
     override fun toString(): String {
         return "\nStart: ${start}\n\tLs:${locations}\n\tCPs: ${checkpoints}\n\tWPs: ${waypoints}\nEnd: ${end}"

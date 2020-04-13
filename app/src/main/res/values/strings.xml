@@ -29,4 +29,5 @@
     <string name="session_label_waypoints_placeholder">0</string>
     <string name="session_label_checkpoints">"Checkpoints: "</string>
     <string name="session_label_waypoints">"Waypoints: "</string>
+    <string name="session_title_placeholder">Session title:</string>
 </resources>

@@ -8,6 +8,7 @@ import ee.taltech.mmalia.ObjectBox
 import ee.taltech.mmalia.R
 import ee.taltech.mmalia.SessionRecyclerViewAdapter
 import ee.taltech.mmalia.model.Session
+import ee.taltech.mmalia.model.Session_
 import io.objectbox.Box
 import io.objectbox.kotlin.boxFor
 import kotlinx.android.synthetic.main.activity_session.*
@@ -26,15 +27,12 @@ class SessionActivity : AppCompatActivity() {
 
         val sessionBox: Box<Session> = ObjectBox.boxStore.boxFor()
 
-/*        sessionBox.put(Session().apply {
-            locations.add(SimpleLocation(54.55, 20.95, Date().time))
-            locations.add(SimpleLocation(54.58, 20.45, Date().time + 100 * 1000))
-            locations.add(SimpleLocation(54.65, 20.49, Date().time + 200 * 1000))
-            checkpoints.add(SimpleLocation(54.58, 20.45, Date().time + 100 * 1000))
-            waypoints.add(SimpleLocation(54.65, 20.49, Date().time + 200 * 1000))
-        })*/
+//        sessionBox.removeAll()
 
-        layout_session_recycler_view.adapter = SessionRecyclerViewAdapter(this, sessionBox.all)
+        layout_session_recycler_view.adapter = SessionRecyclerViewAdapter(
+            this,
+            sessionBox.query().orderDesc(Session_.start).build().find()
+        )
         layout_session_recycler_view.layoutManager = LinearLayoutManager(this)
 
         //TODO: DB + recycler view

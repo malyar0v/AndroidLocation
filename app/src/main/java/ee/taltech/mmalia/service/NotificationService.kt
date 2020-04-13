@@ -103,7 +103,6 @@ class NotificationService : Service() {
                 }
                 C.START_STOP_ACTION -> {
                     Log.d(TAG, "Start/Stop clicked")
-                    stopSelf()
                 }
                 C.CP_ACTION -> {
                     Log.d(TAG, "CP clicked")

@@ -124,7 +124,10 @@ class LocationServiceManager(val locationService: LocationService) :
                 C.START_STOP_ACTION -> {
                     Log.d(TAG, "Start/Stop clicked")
 
-                    locationService.stopSelf()
+                    context?.let {
+                        it.stopService(Intent(it, LocationService::class.java))
+                        it.stopService(Intent(it, NotificationService::class.java))
+                    }
                 }
                 C.CP_ACTION -> {
                     Log.d(TAG, "CP clicked")
