@@ -27,7 +27,7 @@
             style="@style/navigation_info_land"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="5000"
+            android:text="@string/session_distance_placeholder"
             android:textAlignment="textEnd" />
 
         <TextView

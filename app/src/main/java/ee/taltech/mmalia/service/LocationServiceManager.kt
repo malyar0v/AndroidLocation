@@ -15,7 +15,8 @@ import ee.taltech.mmalia.Utils.NavigationData.Companion.speed
 import ee.taltech.mmalia.model.NavigationData
 import ee.taltech.mmalia.model.Session
 import ee.taltech.mmalia.model.SimpleLocation
-import ee.taltech.mmalia.service.notification.LocationActiveNotification
+import ee.taltech.mmalia.service.notification.ConfirmationNotification
+import ee.taltech.mmalia.service.notification.NavigationNotification
 import io.objectbox.Box
 import io.objectbox.kotlin.boxFor
 
@@ -40,20 +41,25 @@ class LocationServiceManager(val locationService: LocationService) :
         addAction(C.START_STOP_ACTION)
         addAction(C.CP_ACTION)
         addAction(C.WP_ACTION)
+        addAction(C.SESSION_STOP_CONFIRM_ACTION)
+        addAction(C.SESSION_STOP_CANCEL_ACTION)
     }
+
+    var showingNavigationNotification = true
 
     lateinit var session: Session
     lateinit var navigationData: NavigationData
 
     private val sessionBox: Box<Session> = ObjectBox.boxStore.boxFor()
-    //private val simpleLocationBox: Box<SimpleLocation> = ObjectBox.boxStore.boxFor()
 
     override fun onServiceStart() {
+        navigationData = NavigationData()
+        session = Session()
+
         locationService.startForeground(
-            C.NOTIFICATION_LOCATION_ACTIVE_ID,
-            LocationActiveNotification.create(context)
+            C.NOTIFICATION_NAVIGATION_ID,
+            NavigationNotification.create(context, navigationData)
         )
-        broadcastReceiver.onServiceStart()
     }
 
     override fun onNewLocation(location: Location) {
@@ -88,6 +94,15 @@ class LocationServiceManager(val locationService: LocationService) :
         }
 
 
+        if (showingNavigationNotification)
+            locationService.startForeground(
+                C.NOTIFICATION_NAVIGATION_ID,
+                NavigationNotification.create(
+                    context,
+                    navigationData
+                )
+            )
+
         session.locations.add(SimpleLocation.from(location))
 
         sessionBox.put(session)
@@ -96,27 +111,16 @@ class LocationServiceManager(val locationService: LocationService) :
 
         val intent = Intent(C.LOCATION_UPDATE_ACTION)
         intent.putExtra(C.NAVIGATION_DATA_UPDATE_KEY, navigationData)
-        intent.putExtra(C.LOCATION_UPDATE_KEY, location)
+        intent.putExtra(C.SESSION_UPDATE_KEY, session)
         LocalBroadcastManager.getInstance(context).sendBroadcast(intent)
     }
 
     override fun onServiceStop() {
         // remove notifications
-        broadcastReceiver.onServiceStop()
-        NotificationManagerCompat.from(context).cancel(C.NOTIFICATION_LOCATION_ACTIVE_ID)
+        NotificationManagerCompat.from(context).cancel(C.NOTIFICATION_NAVIGATION_ID)
     }
 
     inner class UserEventsBroadcastReceiver : BroadcastReceiver() {
-
-        fun onServiceStart() {
-            Log.d(TAG, "Location service is started")
-            session = Session()
-            navigationData = NavigationData()
-        }
-
-        fun onServiceStop() {
-            Log.d(TAG, "Location service is stopped")
-        }
 
         override fun onReceive(context: Context?, intent: Intent?) {
             Log.d(TAG, intent!!.action)
@@ -124,10 +128,13 @@ class LocationServiceManager(val locationService: LocationService) :
                 C.START_STOP_ACTION -> {
                     Log.d(TAG, "Start/Stop clicked")
 
-                    context?.let {
-                        it.stopService(Intent(it, LocationService::class.java))
-                        it.stopService(Intent(it, NotificationService::class.java))
-                    }
+                    locationService.startForeground(
+                        C.NOTIFICATION_CONFIRMATION_ID,
+                        ConfirmationNotification.create(this@LocationServiceManager.context)
+                    )
+                    showingNavigationNotification = false
+
+//                    locationService.stopSelf()
                 }
                 C.CP_ACTION -> {
                     Log.d(TAG, "CP clicked")
@@ -162,6 +169,18 @@ class LocationServiceManager(val locationService: LocationService) :
                         .let { location -> session.waypoints.add(location) }
 
                     sessionBox.put(session)
+                }
+                C.SESSION_STOP_CONFIRM_ACTION -> {
+                    Log.d(TAG, "Stop confirmed")
+
+                    LocalBroadcastManager.getInstance(this@LocationServiceManager.context)
+                        .sendBroadcast(Intent(C.SESSION_STOP_CONFIRM_ACTION))
+
+                    locationService.stopSelf()
+                }
+                C.SESSION_STOP_CANCEL_ACTION -> {
+                    Log.d(TAG, "Stop cancelled")
+                    showingNavigationNotification = true
                 }
             }
         }

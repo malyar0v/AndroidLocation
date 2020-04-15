@@ -5,7 +5,7 @@
   "entities": [
     {
       "id": "1:6867873421291126511",
-      "lastPropertyId": "3:476719374114775847",
+      "lastPropertyId": "5:2229196431598135315",
       "name": "Session",
       "properties": [
         {
@@ -19,6 +19,16 @@
           "name": "start",
           "type": 6,
           "flags": 4
+        },
+        {
+          "id": "4:4537379389593540618",
+          "name": "title",
+          "type": 9
+        },
+        {
+          "id": "5:2229196431598135315",
+          "name": "speedRange",
+          "type": 9
         }
       ],
       "relations": [

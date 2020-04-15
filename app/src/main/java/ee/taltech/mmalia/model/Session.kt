@@ -1,16 +1,24 @@
 package ee.taltech.mmalia.model
 
+import android.os.Parcel
+import android.os.Parcelable
+import ee.taltech.mmalia.db.SpeedRangeConverter
+import io.objectbox.annotation.Convert
 import io.objectbox.annotation.Entity
 import io.objectbox.annotation.Id
 import java.util.*
 
 @Entity
-class Session {
+class Session() : Parcelable {
 
     @Id
     var id: Long = 0
 
     var title: String = "Title"
+
+    @Convert(converter = SpeedRangeConverter::class, dbType = String::class)
+    var speedRange: SpeedRange = SpeedRange.DEFAULT
+
     val start: Long = Date().time
 
     lateinit var locations: MutableList<SimpleLocation>
@@ -26,7 +34,33 @@ class Session {
             }
         }
 
+    constructor(parcel: Parcel) : this() {
+        id = parcel.readLong()
+        parcel.readString()?.let {
+            title = it
+        }
+    }
+
     override fun toString(): String {
         return "\nStart: ${start}\n\tLs:${locations}\n\tCPs: ${checkpoints}\n\tWPs: ${waypoints}\nEnd: ${end}"
+    }
+
+    override fun writeToParcel(parcel: Parcel, flags: Int) {
+        parcel.writeLong(id)
+        parcel.writeString(title)
+    }
+
+    override fun describeContents(): Int {
+        return 0
+    }
+
+    companion object CREATOR : Parcelable.Creator<Session> {
+        override fun createFromParcel(parcel: Parcel): Session {
+            return Session(parcel)
+        }
+
+        override fun newArray(size: Int): Array<Session?> {
+            return arrayOfNulls(size)
+        }
     }
 }

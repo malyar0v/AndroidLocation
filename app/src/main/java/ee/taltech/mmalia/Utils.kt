@@ -1,10 +1,35 @@
 package ee.taltech.mmalia
 
 import android.location.Location
+import android.widget.EditText
+import ee.taltech.mmalia.model.SpeedRange
 import java.text.SimpleDateFormat
 import java.util.*
 
 class Utils {
+
+    object Extensions {
+
+        fun SpeedRange.Companion.parse(
+            minEditText: EditText,
+            maxEditText: EditText
+        ): SpeedRange? {
+            val min = try {
+                minEditText.text.toString().toInt()
+            } catch (e: IllegalArgumentException) {
+                return null
+            }
+            val max = try {
+                maxEditText.text.toString().toInt()
+            } catch (e: IllegalArgumentException) {
+                return null
+            }
+
+            if (max < min) return null
+
+            return SpeedRange(min..max)
+        }
+    }
 
     class NavigationData {
 
@@ -20,7 +45,7 @@ class Utils {
             fun duration(millis: Long) = TIME_FORMATTER.format(Date(millis))
 
             fun speed(distance: Float, time: Long) =
-                1 / ((distance / 1000f) / (time / (1000 * 60f)))
+                1 / (distance / (time / 60))
 
             fun speed(speed: Float): String {
 

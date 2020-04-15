@@ -30,4 +30,9 @@
     <string name="session_label_checkpoints">"Checkpoints: "</string>
     <string name="session_label_waypoints">"Waypoints: "</string>
     <string name="session_title_placeholder">Session title:</string>
+    <string name="session_stop_confirmation">Are you sure that you want to stop the current session?</string>
+    <string name="dialog_optimal_speed">Optimal speed range for the current session:</string>
+    <string name="dialog_optimal_speed_units">min/km</string>
+    <string name="dialog_optimal_speed_separator">—</string>
+    <string name="preference_file_key">ee.taltech.mmalia.shared_preferences</string>
 </resources>

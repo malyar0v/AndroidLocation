@@ -5,6 +5,7 @@ import android.content.Intent
 import android.os.IBinder
 import android.os.Looper
 import android.util.Log
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.google.android.gms.location.*
 import ee.taltech.mmalia.C
 
@@ -122,8 +123,7 @@ class LocationService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         Log.d(TAG, "onStartCommand")
 
-        sendBroadcast(Intent(C.LOCATION_SERVICE_START_ACTION))
-        //LocalBroadcastManager.getInstance(this).sendBroadcast(Intent(C.LOCATION_SERVICE_START_ACTION))
+        LocalBroadcastManager.getInstance(this).sendBroadcast(Intent(C.LOCATION_SERVICE_START_ACTION))
 
         locationServiceManager.onServiceStart()
 

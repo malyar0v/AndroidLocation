@@ -1,12 +1,8 @@
 package ee.taltech.mmalia.activity
 
 import android.Manifest
-import android.content.BroadcastReceiver
-import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
+import android.content.*
 import android.content.pm.PackageManager
-import android.location.Location
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -15,24 +11,24 @@ import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
+import android.widget.EditText
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
-import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.LatLng
-import com.google.android.gms.maps.model.MarkerOptions
 import com.google.android.material.snackbar.Snackbar
-import ee.taltech.mmalia.BuildConfig
-import ee.taltech.mmalia.C
-import ee.taltech.mmalia.R
+import ee.taltech.mmalia.*
+import ee.taltech.mmalia.Utils.Extensions.parse
 import ee.taltech.mmalia.model.NavigationData
+import ee.taltech.mmalia.model.Session
+import ee.taltech.mmalia.model.SpeedRange
 import ee.taltech.mmalia.service.LocationService
-import ee.taltech.mmalia.service.NotificationService
-import kotlinx.android.synthetic.main.map_controls.*
+import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.map_navigation.*
 
 class MainActivity : AppCompatActivity(), OnMapReadyCallback, View.OnClickListener {
@@ -41,13 +37,22 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, View.OnClickListen
         private val TAG = this::class.java.declaringClass!!.simpleName
     }
 
+    private val menuHandler = OptionsMenuHandler()
+
     private lateinit var mMap: GoogleMap
+    private lateinit var mapTrackDrawer: IncrementalMapTrackDrawer
+    private var mapMode: MapMode = NorthUpMapMode()
+    private lateinit var speedRange: SpeedRange
 
     private val broadcastReceiver = InnerBroadcastReceiver()
     private val broadcastReceiverIntentFilter: IntentFilter = IntentFilter()
         .apply {
             addAction(C.LOCATION_UPDATE_ACTION)
+            addAction(C.SESSION_STOP_CONFIRM_ACTION)
+            addAction(C.LOCATION_SERVICE_START_ACTION)
         }
+
+    // ============================================== LIFECYCLE =============================================
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -60,8 +65,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, View.OnClickListen
             .findFragmentById(R.id.map) as SupportMapFragment
         mapFragment.getMapAsync(this)
 
-        // safe to call every time
-
         if (!checkPermissions()) {
             requestPermissions()
         }
@@ -69,18 +72,18 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, View.OnClickListen
         start_stop_img_btn.setOnClickListener(this)
         cp_img_btn.setOnClickListener(this)
         wp_img_btn.setOnClickListener(this)
-
-        controls_sessions_btn.setOnClickListener(this)
     }
 
     override fun onResume() {
         super.onResume()
         Log.d(TAG, "onResume")
 
+        restorePreferences(getPreferences(Context.MODE_PRIVATE))
+
         LocalBroadcastManager.getInstance(this)
             .registerReceiver(broadcastReceiver, broadcastReceiverIntentFilter)
 
-        if (LocationService.running && NotificationService.running) setStartStopButton(
+        if (LocationService.running) setStartStopButton(
             R.drawable.ic_stop
         )
         else setStartStopButton(R.drawable.ic_play_arrow_black)
@@ -93,52 +96,18 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, View.OnClickListen
         LocalBroadcastManager.getInstance(this).unregisterReceiver(broadcastReceiver)
     }
 
-    override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        menuInflater.inflate(R.menu.options_menu, menu)
-        return true
+    override fun onCreateOptionsMenu(menu: Menu) = menuHandler.onCreateOptionsMenu(menu)
+    override fun onOptionsItemSelected(item: MenuItem) = menuHandler.onOptionsItemSelected(item)
+
+    private fun restorePreferences(sharedPref: SharedPreferences) {
+        val min =
+            sharedPref.getInt(C.SharedPreferences.OPTIMAL_SPEED_MIN_KEY, SpeedRange.DEFAULT_MIN)
+        val max =
+            sharedPref.getInt(C.SharedPreferences.OPTIMAL_SPEED_MAX_KEY, SpeedRange.DEFAULT_MAX)
+        speedRange = SpeedRange(min..max)
     }
 
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        return when (item.itemId) {
-            R.id.option_1 -> true
-            else -> super.onOptionsItemSelected(item)
-        }
-    }
-
-    fun setStartStopButton(resourceId: Int) = start_stop_img_btn.setImageResource(resourceId)
-
-    fun notifyLocationService(intent: Intent) {
-        Log.d(TAG, "Sending intent: ${intent.action}")
-
-        sendBroadcast(intent)
-    }
-
-    override fun onClick(v: View?) {
-
-        v?.let {
-
-            when (it.id) {
-                R.id.start_stop_img_btn -> {
-                    notifyLocationService(Intent(C.START_STOP_ACTION))
-                    buttonStartStopOnClick()
-                }
-                R.id.cp_img_btn -> {
-                    notifyLocationService(Intent(C.CP_ACTION))
-                }
-                R.id.wp_img_btn -> {
-                    notifyLocationService(Intent(C.WP_ACTION))
-                }
-                R.id.controls_sessions_btn -> {
-                    startActivity(Intent(this, SessionActivity::class.java))
-                }
-            }
-
-        }
-    }
+    // ============================================== GOOGLE MAPS =============================================
 
     /**
      * Manipulates the map once available.
@@ -151,14 +120,12 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, View.OnClickListen
      */
     override fun onMapReady(googleMap: GoogleMap) {
         mMap = googleMap
-
-        // Add a marker in Sydney and move the camera
-        val sydney = LatLng(-34.0, 151.0)
-        mMap.addMarker(MarkerOptions().position(sydney).title("Marker in Sydney"))
-        mMap.moveCamera(CameraUpdateFactory.newLatLng(sydney))
+        mMap.isMyLocationEnabled = true
+        mapTrackDrawer = IncrementalMapTrackDrawer(mMap)
     }
 
     // ============================================== PERMISSION HANDLING =============================================
+
     // Returns the current state of the permissions needed.
     private fun checkPermissions(): Boolean {
         return PackageManager.PERMISSION_GRANTED == ActivityCompat.checkSelfPermission(
@@ -245,28 +212,193 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, View.OnClickListen
     }
 
     // ============================================== CLICK HANDLERS =============================================
-    fun buttonStartStopOnClick() {
 
-        if (LocationService.running && NotificationService.running) {
+    override fun onClick(v: View?) {
 
-            stopService(Intent(this, NotificationService::class.java))
-            stopService(Intent(this, LocationService::class.java))
+        v?.let {
 
-            setStartStopButton(R.drawable.ic_play_arrow_black)
-        } else if (!LocationService.running && !NotificationService.running) {
+            when (it.id) {
+                R.id.start_stop_img_btn -> {
+                    notifyLocationService(Intent(C.START_STOP_ACTION))
+                    onStartStopClick()
+                }
+                R.id.cp_img_btn -> {
+                    notifyLocationService(Intent(C.CP_ACTION))
+                }
+                R.id.wp_img_btn -> {
+                    notifyLocationService(Intent(C.WP_ACTION))
+                }
+                R.id.controls_sessions_btn -> {
+                    startActivity(Intent(this, SessionActivity::class.java))
+                }
+            }
+
+        }
+    }
+
+    private fun notifyLocationService(intent: Intent) {
+        Log.d(TAG, "Sending intent: ${intent.action}")
+
+        sendBroadcast(intent)
+    }
+
+    fun onStartStopClick() {
+
+        if (!LocationService.running) {
             if (Build.VERSION.SDK_INT >= 26) {
                 // starting the FOREGROUND service
                 // service has to display non-dismissable notification within 5 secs
                 startForegroundService(Intent(this, LocationService::class.java))
-                startForegroundService(Intent(this, NotificationService::class.java))
             } else {
                 startService(Intent(this, LocationService::class.java))
-                startService(Intent(this, NotificationService::class.java))
             }
-            setStartStopButton(R.drawable.ic_stop)
         } else {
-            Log.d(TAG, "One of the services is unintentionally running!")
+            AlertDialog.Builder(this)
+                .apply {
+                    setMessage(getString(R.string.session_stop_confirmation))
+                    setPositiveButton("Yes") { dialog, which ->
+                        notifyLocationService(Intent(C.SESSION_STOP_CONFIRM_ACTION))
+                    }
+                    setNegativeButton("No") { dialog, which -> notifyLocationService(Intent(C.SESSION_STOP_CANCEL_ACTION)) }
+                }
+                .create()
+                .show()
         }
+    }
+
+    fun setStartStopButton(resourceId: Int) = start_stop_img_btn.setImageResource(resourceId)
+
+    // ============================================== OPTIONS MENU HANDLER =============================================
+    private inner class OptionsMenuHandler {
+
+        fun onCreateOptionsMenu(menu: Menu): Boolean {
+            // Inflate the menu; this adds items to the action bar if it is present.
+            menuInflater.inflate(R.menu.activity_main_options_menu, menu)
+
+            //menu.findItem(R.id.menu_item_account).subMenu.removeItem(R.id.menu_item_logout)
+
+            return true
+        }
+
+        fun onOptionsItemSelected(item: MenuItem): Boolean {
+            // Handle action bar item clicks here. The action bar will
+            // automatically handle clicks on the Home/Up button, so long
+            // as you specify a parent activity in AndroidManifest.xml.
+            when (item.itemId) {
+                R.id.menu_item_auto_zoom -> onAutoZoomSelected(item)
+                R.id.menu_item_compass -> onCompassSelected()
+                R.id.menu_item_history -> onHistorySelected()
+                R.id.menu_item_north_up -> onNorthUpSelected()
+                R.id.menu_item_direction_up -> onDirectionUpSelected()
+                R.id.menu_item_optimal_speed -> onOptimalSpeedSelected()
+                R.id.menu_item_login -> onLoginSelected()
+                R.id.menu_item_logout -> onLogoutSelected()
+                R.id.menu_item_sync_1 -> onSync1Selected()
+                R.id.menu_item_sync_2 -> onSync2Selected()
+                R.id.menu_item_sync_3 -> onSync3Selected()
+                R.id.menu_item_gps_updates_slow -> onGpsUpdatesSlowSelected()
+                R.id.menu_item_gps_updates_medium -> onGpsUpdatesMediumSelected()
+                R.id.menu_item_gps_updates_fast -> onGpsUpdatesFastSelected()
+                R.id.menu_item_reset -> onResetSelected()
+            }
+
+            //super.onOptionsItemSelected(item)
+            return true
+        }
+
+        private fun onAutoZoomSelected(item: MenuItem) {
+            if (item.isChecked) {
+                mapMode = NoZoomMapMode()
+                item.isChecked = false
+            } else {
+                mapMode = NorthUpMapMode()
+                item.isChecked = true
+            }
+        }
+
+        fun onCompassSelected() {
+            TODO("Not yet implemented")
+        }
+
+        fun onHistorySelected() {
+            startActivity(Intent(this@MainActivity, SessionActivity::class.java))
+        }
+
+        fun onNorthUpSelected() {
+            mapMode = NorthUpMapMode()
+        }
+
+        fun onDirectionUpSelected() {
+            mapMode = DirectionUpMapMode()
+        }
+
+        fun onOptimalSpeedSelected() {
+            val layout =
+                layoutInflater.inflate(R.layout.optimal_speed_dialog, activity_main, false)
+
+            val minEditText =
+                layout.findViewById<EditText>(R.id.dialog_optimal_speed_min_edit_text)
+                    .apply { setText(speedRange.min.toString()) }
+
+            val maxEditText =
+                layout.findViewById<EditText>(R.id.dialog_optimal_speed_max_edit_text)
+                    .apply { setText(speedRange.max.toString()) }
+
+            AlertDialog.Builder(this@MainActivity)
+                .setView(layout)
+                .setPositiveButton("OK") { dialog, which ->
+
+                    speedRange =
+                        SpeedRange.parse(minEditText, maxEditText) ?: return@setPositiveButton
+
+                    getPreferences(Context.MODE_PRIVATE)
+                        .edit()
+                        .putInt(C.SharedPreferences.OPTIMAL_SPEED_MIN_KEY, speedRange.min)
+                        .putInt(C.SharedPreferences.OPTIMAL_SPEED_MAX_KEY, speedRange.max)
+                        .apply()
+                }
+                .setNegativeButton("Cancel") { dialog, which -> }
+                .create()
+                .show()
+        }
+
+        fun onLoginSelected() {
+            TODO("Not yet implemented")
+        }
+
+        fun onLogoutSelected() {
+            TODO("Not yet implemented")
+        }
+
+        fun onSync1Selected() {
+            TODO("Not yet implemented")
+        }
+
+        fun onSync2Selected() {
+            TODO("Not yet implemented")
+        }
+
+        fun onSync3Selected() {
+            TODO("Not yet implemented")
+        }
+
+        fun onGpsUpdatesSlowSelected() {
+            TODO("Not yet implemented")
+        }
+
+        fun onGpsUpdatesMediumSelected() {
+            TODO("Not yet implemented")
+        }
+
+        fun onGpsUpdatesFastSelected() {
+            TODO("Not yet implemented")
+        }
+
+        fun onResetSelected() {
+            TODO("Not yet implemented")
+        }
+
+
     }
 
     // ============================================== BROADCAST RECEIVER =============================================
@@ -276,8 +408,12 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, View.OnClickListen
             Log.d(TAG, intent!!.action)
             when (intent!!.action) {
                 C.LOCATION_UPDATE_ACTION -> {
+
                     val navigationData =
                         intent.getParcelableExtra<NavigationData>(C.NAVIGATION_DATA_UPDATE_KEY)
+
+                    val location = navigationData?.currentLocation
+                    val bearing = location?.bearing
 
                     navigationData?.run {
                         session_distance_text_view.text = sessionDistance()
@@ -291,10 +427,35 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, View.OnClickListen
                         wp_speed_text_view.text = wpSpeed()
                     }
 
-                    val location = intent.getParcelableExtra<Location>(C.LOCATION_UPDATE_KEY)
-                    Log.d(TAG, "New location: ${location}")
+
+                    val session = intent.getParcelableExtra<Session>(C.SESSION_UPDATE_KEY)
+
+                    Log.d(TAG, "Range: ${speedRange}")
+
+                    if (session != null && location != null) {
+
+                        mapTrackDrawer
+                            .update(session)
+                            .draw(5F)
+                            .zoom(
+                                mapMode
+                                    .bearing(bearing!!)
+                                    .cameraUpdate(LatLng(location.latitude, location.longitude))
+                                    ?: return
+                            )
+
+
+                    }
+
+                }
+                C.LOCATION_SERVICE_START_ACTION -> {
+                    setStartStopButton(R.drawable.ic_stop)
+                }
+                C.SESSION_STOP_CONFIRM_ACTION -> {
+                    setStartStopButton(R.drawable.ic_play_arrow_black)
                 }
             }
         }
     }
 }
+

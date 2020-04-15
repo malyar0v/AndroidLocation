@@ -1,0 +1,86 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:context="com.example.myapplication.MainActivity">
+
+    <item
+        android:id="@+id/menu_item_auto_zoom"
+        android:checkable="true"
+        android:checked="true"
+        android:title="Auto Zoom" />
+
+    <item
+        android:id="@+id/menu_item_compass"
+        android:icon="@drawable/ic_compass_light"
+        android:orderInCategory="100"
+        android:title="Compass"
+        app:showAsAction="ifRoom" />
+
+    <item
+        android:id="@+id/menu_item_history"
+        android:icon="@drawable/ic_history"
+        android:orderInCategory="100"
+        android:title="History"
+        app:showAsAction="ifRoom" />
+
+    <item android:title="Direction mode">
+        <menu>
+            <item
+                android:id="@+id/menu_item_north_up"
+                android:title="North Up" />
+            <item
+                android:id="@+id/menu_item_direction_up"
+                android:title="Direction Up" />
+        </menu>
+    </item>
+
+    <item
+        android:id="@+id/menu_item_optimal_speed"
+        android:title="Optimal speed"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/menu_item_account"
+        android:title="Account">
+        <menu>
+            <item
+                android:id="@+id/menu_item_login"
+                android:title="Login" />
+            <item
+                android:id="@+id/menu_item_logout"
+                android:title="Logout" />
+
+            <item android:title="Sync interval">
+                <menu>
+                    <item
+                        android:id="@+id/menu_item_sync_1"
+                        android:title="5 sec" />
+                    <item
+                        android:id="@+id/menu_item_sync_2"
+                        android:title="30 sec" />
+                    <item
+                        android:id="@+id/menu_item_sync_3"
+                        android:title="1 min" />
+                </menu>
+            </item>
+        </menu>
+    </item>
+
+    <item android:title="GPS updates">
+        <menu>
+            <item
+                android:id="@+id/menu_item_gps_updates_slow"
+                android:title="Slow" />
+            <item
+                android:id="@+id/menu_item_gps_updates_medium"
+                android:title="Medium" />
+            <item
+                android:id="@+id/menu_item_gps_updates_fast"
+                android:title="Fast" />
+        </menu>
+    </item>
+
+    <item
+        android:id="@+id/menu_item_reset"
+        android:title="Reset" />
+</menu>

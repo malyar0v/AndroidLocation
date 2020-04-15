@@ -34,7 +34,5 @@ class SessionActivity : AppCompatActivity() {
             sessionBox.query().orderDesc(Session_.start).build().find()
         )
         layout_session_recycler_view.layoutManager = LinearLayoutManager(this)
-
-        //TODO: DB + recycler view
     }
 }
