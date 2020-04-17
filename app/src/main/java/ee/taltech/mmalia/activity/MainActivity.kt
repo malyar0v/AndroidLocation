@@ -24,12 +24,16 @@ import com.google.android.gms.maps.model.LatLng
 import com.google.android.material.snackbar.Snackbar
 import ee.taltech.mmalia.*
 import ee.taltech.mmalia.Utils.Extensions.parse
+import ee.taltech.mmalia.backend.BackendAuthenticator
+import ee.taltech.mmalia.backend.LogInQuery
+import ee.taltech.mmalia.backend.NewLocationQuery
 import ee.taltech.mmalia.model.NavigationData
 import ee.taltech.mmalia.model.Session
 import ee.taltech.mmalia.model.SpeedRange
 import ee.taltech.mmalia.service.LocationService
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.map_navigation.*
+import java.util.*
 
 class MainActivity : AppCompatActivity(), OnMapReadyCallback, View.OnClickListener {
 
@@ -363,7 +367,57 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, View.OnClickListen
         }
 
         fun onLoginSelected() {
-            TODO("Not yet implemented")
+
+            val firstName = "someone"
+            val lastName = "else"
+            val email = "example@ee.ee"
+            val password = "1Qwerty!"
+
+/*            RegisterQuery(
+                firstName,
+                lastName,
+                email,
+                password,
+                { response ->  },
+                { response ->  }
+            )
+                .execute()*/
+
+
+
+            LogInQuery(
+                getString(R.string.akaver_email),
+                getString(R.string.akaver_password),
+                { logInResponse ->
+                    OkHttpClient.authenticate(BackendAuthenticator(logInResponse.token))
+
+                    NewLocationQuery(
+                        Date(),
+                        24.456,
+                        60.789,
+                        17.5,
+                        75.7,
+                        13.9,
+                        "5580db3a-7a99-43b3-70a2-08d7e1e6070f",
+                        "00000000-0000-0000-0000-000000000001"
+                        ,
+                        {},
+                        {}).execute()
+                },
+                { response -> }
+            )
+                .execute()
+
+/*            NewSessionQuery(
+                "test name",
+                "test description",
+                Date(),
+                {},
+                {}
+            )
+                .execute()*/
+
+
         }
 
         fun onLogoutSelected() {
@@ -443,10 +497,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, View.OnClickListen
                                     .cameraUpdate(LatLng(location.latitude, location.longitude))
                                     ?: return
                             )
-
-
                     }
-
                 }
                 C.LOCATION_SERVICE_START_ACTION -> {
                     setStartStopButton(R.drawable.ic_stop)

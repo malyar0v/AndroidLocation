@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="akaver_email" templateMergeStrategy="preserve" translatable="false">test@google.com</string>
+    <string name="akaver_password" templateMergeStrategy="preserve" translatable="false">!2345Six</string>
+</resources>

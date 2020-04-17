@@ -80,9 +80,40 @@
         }
       ],
       "relations": []
+    },
+    {
+      "id": "3:3015547421947686644",
+      "lastPropertyId": "4:4187682573394106330",
+      "name": "SpeedRange",
+      "properties": [
+        {
+          "id": "1:8610182848039984147",
+          "name": "id",
+          "type": 6,
+          "flags": 1
+        },
+        {
+          "id": "2:7572966533721072284",
+          "name": "min",
+          "type": 5,
+          "flags": 4
+        },
+        {
+          "id": "3:8224861513105348178",
+          "name": "max",
+          "type": 5,
+          "flags": 4
+        },
+        {
+          "id": "4:4187682573394106330",
+          "name": "optimalSpeedRange",
+          "type": 9
+        }
+      ],
+      "relations": []
     }
   ],
-  "lastEntityId": "2:8561800046678973377",
+  "lastEntityId": "3:3015547421947686644",
   "lastIndexId": "0:0",
   "lastRelationId": "3:3648521574447309966",
   "lastSequenceId": "0:0",
