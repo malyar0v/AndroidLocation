@@ -5,6 +5,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
 import android.os.Build
+import ee.taltech.mmalia.backend.BackendAuthenticator
 
 
 class App : Application() {
@@ -15,6 +16,8 @@ class App : Application() {
         ObjectBox.init(this)
 
         createNotificationChannel()
+
+        OkHttpClient.authenticate(BackendAuthenticator(this))
     }
 
     // ============================================== NOTIFICATION CHANNEL CREATION =============================================

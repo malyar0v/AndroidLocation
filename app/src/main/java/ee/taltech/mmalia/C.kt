@@ -19,12 +19,22 @@ object C {
     const val SESSION_STOP_CONFIRM_ACTION = "ee.taltech.mmalia.session_stop_confirm"
     const val SESSION_STOP_CANCEL_ACTION = "ee.taltech.mmalia.cp.session_stop_cancel"
 
-    const val NAVIGATION_DATA_UPDATE_KEY = "New Navigation data is available"
-    const val LOCATION_UPDATE_KEY = "New Location is available"
-    const val SESSION_UPDATE_KEY = "Updated session is available"
+
+
+    object IntentExtraKeys {
+        const val NAVIGATION_DATA_UPDATE = "New Navigation data is available"
+        const val LOCATION_UPDATE = "New Location is available"
+        const val SESSION_UPDATE = "Updated session is available"
+        const val SESSION_TITLE = "Session title"
+        const val SESSION_DESCRIPTION = "Session description"
+        const val SESSION_BACKEND_ID = "Session backend id"
+    }
 
     object SharedPreferences {
         const val OPTIMAL_SPEED_MIN_KEY = "min speed"
         const val OPTIMAL_SPEED_MAX_KEY = "max speed"
+
+        const val API_PREFERENCES_KEY = "api"
+        const val API_TOKEN_KEY = "token"
     }
 }

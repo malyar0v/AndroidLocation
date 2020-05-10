@@ -26,14 +26,13 @@ import ee.taltech.mmalia.*
 import ee.taltech.mmalia.Utils.Extensions.parse
 import ee.taltech.mmalia.backend.BackendAuthenticator
 import ee.taltech.mmalia.backend.LogInQuery
-import ee.taltech.mmalia.backend.NewLocationQuery
+import ee.taltech.mmalia.backend.RegisterQuery
 import ee.taltech.mmalia.model.NavigationData
 import ee.taltech.mmalia.model.Session
 import ee.taltech.mmalia.model.SpeedRange
 import ee.taltech.mmalia.service.LocationService
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.map_navigation.*
-import java.util.*
 
 class MainActivity : AppCompatActivity(), OnMapReadyCallback, View.OnClickListener {
 
@@ -47,6 +46,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, View.OnClickListen
     private lateinit var mapTrackDrawer: IncrementalMapTrackDrawer
     private var mapMode: MapMode = NorthUpMapMode()
     private lateinit var speedRange: SpeedRange
+
+    //private var loggedIn = false
 
     private val broadcastReceiver = InnerBroadcastReceiver()
     private val broadcastReceiverIntentFilter: IntentFilter = IntentFilter()
@@ -91,6 +92,15 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, View.OnClickListen
             R.drawable.ic_stop
         )
         else setStartStopButton(R.drawable.ic_play_arrow_black)
+
+        if (!Utils.Api.isLoggedIn(this)) {
+            Toast.makeText(
+                this,
+                "Log in for syncing to work!",
+                Toast.LENGTH_SHORT
+            )
+                .show()
+        }
     }
 
     override fun onStop() {
@@ -220,7 +230,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, View.OnClickListen
     override fun onClick(v: View?) {
 
         v?.let {
-
             when (it.id) {
                 R.id.start_stop_img_btn -> {
                     notifyLocationService(Intent(C.START_STOP_ACTION))
@@ -232,11 +241,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, View.OnClickListen
                 R.id.wp_img_btn -> {
                     notifyLocationService(Intent(C.WP_ACTION))
                 }
-                R.id.controls_sessions_btn -> {
-                    startActivity(Intent(this, SessionActivity::class.java))
-                }
             }
-
         }
     }
 
@@ -249,13 +254,24 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, View.OnClickListen
     fun onStartStopClick() {
 
         if (!LocationService.running) {
-            if (Build.VERSION.SDK_INT >= 26) {
-                // starting the FOREGROUND service
-                // service has to display non-dismissable notification within 5 secs
-                startForegroundService(Intent(this, LocationService::class.java))
-            } else {
-                startService(Intent(this, LocationService::class.java))
-            }
+            SessionStartDialog(this, { title, description ->
+                val i = Intent(this, LocationService::class.java)
+                    .apply {
+                        putExtra(C.IntentExtraKeys.SESSION_TITLE, title)
+                        putExtra(C.IntentExtraKeys.SESSION_DESCRIPTION, description)
+                    }
+
+                if (Build.VERSION.SDK_INT >= 26) {
+                    // starting the FOREGROUND service
+                    // service has to display non-dismissable notification within 5 secs
+                    startForegroundService(i)
+
+                } else {
+                    startService(i)
+                }
+            })
+                .create()
+                .show()
         } else {
             AlertDialog.Builder(this)
                 .apply {
@@ -275,11 +291,15 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, View.OnClickListen
     // ============================================== OPTIONS MENU HANDLER =============================================
     private inner class OptionsMenuHandler {
 
+        private val context = this@MainActivity
+        lateinit var menu: Menu
+
         fun onCreateOptionsMenu(menu: Menu): Boolean {
             // Inflate the menu; this adds items to the action bar if it is present.
             menuInflater.inflate(R.menu.activity_main_options_menu, menu)
 
-            //menu.findItem(R.id.menu_item_account).subMenu.removeItem(R.id.menu_item_logout)
+            this.menu = menu
+            updateMenu()
 
             return true
         }
@@ -297,6 +317,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, View.OnClickListen
                 R.id.menu_item_optimal_speed -> onOptimalSpeedSelected()
                 R.id.menu_item_login -> onLoginSelected()
                 R.id.menu_item_logout -> onLogoutSelected()
+                R.id.menu_item_register -> onRegisterSelected()
                 R.id.menu_item_sync_1 -> onSync1Selected()
                 R.id.menu_item_sync_2 -> onSync2Selected()
                 R.id.menu_item_sync_3 -> onSync3Selected()
@@ -306,8 +327,21 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, View.OnClickListen
                 R.id.menu_item_reset -> onResetSelected()
             }
 
-            //super.onOptionsItemSelected(item)
             return true
+        }
+
+        fun updateMenu() {
+            if (Utils.Api.isLoggedIn(context)) {
+                menu.findItem(R.id.menu_item_login).isVisible = false
+                menu.findItem(R.id.menu_item_register).isVisible = false
+                menu.findItem(R.id.menu_item_sync).isVisible = true
+                menu.findItem(R.id.menu_item_logout).isVisible = true
+            } else {
+                menu.findItem(R.id.menu_item_logout).isVisible = false
+                menu.findItem(R.id.menu_item_login).isVisible = true
+                menu.findItem(R.id.menu_item_register).isVisible = true
+                menu.findItem(R.id.menu_item_sync).isVisible = false
+            }
         }
 
         private fun onAutoZoomSelected(item: MenuItem) {
@@ -325,7 +359,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, View.OnClickListen
         }
 
         fun onHistorySelected() {
-            startActivity(Intent(this@MainActivity, SessionActivity::class.java))
+            startActivity(Intent(context, SessionActivity::class.java))
         }
 
         fun onNorthUpSelected() {
@@ -348,7 +382,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, View.OnClickListen
                 layout.findViewById<EditText>(R.id.dialog_optimal_speed_max_edit_text)
                     .apply { setText(speedRange.max.toString()) }
 
-            AlertDialog.Builder(this@MainActivity)
+            AlertDialog.Builder(context)
                 .setView(layout)
                 .setPositiveButton("OK") { dialog, which ->
 
@@ -366,66 +400,55 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, View.OnClickListen
                 .show()
         }
 
+        fun authorize(token: String) {
+            OkHttpClient.authenticate(BackendAuthenticator(context))
+            Utils.Api.setToken(context, token)
+
+            updateMenu()
+        }
+
         fun onLoginSelected() {
-
-            val firstName = "someone"
-            val lastName = "else"
-            val email = "example@ee.ee"
-            val password = "1Qwerty!"
-
-/*            RegisterQuery(
-                firstName,
-                lastName,
-                email,
-                password,
-                { response ->  },
-                { response ->  }
-            )
-                .execute()*/
-
-
-
-            LogInQuery(
-                getString(R.string.akaver_email),
-                getString(R.string.akaver_password),
-                { logInResponse ->
-                    OkHttpClient.authenticate(BackendAuthenticator(logInResponse.token))
-
-                    NewLocationQuery(
-                        Date(),
-                        24.456,
-                        60.789,
-                        17.5,
-                        75.7,
-                        13.9,
-                        "5580db3a-7a99-43b3-70a2-08d7e1e6070f",
-                        "00000000-0000-0000-0000-000000000001"
-                        ,
-                        {},
-                        {}).execute()
-                },
-                { response -> }
-            )
-                .execute()
-
-/*            NewSessionQuery(
-                "test name",
-                "test description",
-                Date(),
-                {},
-                {}
-            )
-                .execute()*/
-
-
+            LoginDialog(context) { email, password ->
+                LogInQuery(
+                    email,
+                    password,
+                    { response ->
+                        authorize(response.token)
+                    },
+                    { error ->
+                    }
+                )
+                    .execute()
+            }
+                .create()
+                .show()
         }
 
         fun onLogoutSelected() {
-            TODO("Not yet implemented")
+            Utils.Api.clearToken(context)
+            updateMenu()
+        }
+
+        fun onRegisterSelected() {
+            RegistrationDialog(context) { firstName, lastName, email, password ->
+                RegisterQuery(
+                    firstName,
+                    lastName,
+                    email,
+                    password,
+                    { response ->
+                        authorize(response.token)
+                    },
+                    { error -> }
+                )
+                    .execute()
+            }
+                .create()
+                .show()
         }
 
         fun onSync1Selected() {
-            TODO("Not yet implemented")
+
         }
 
         fun onSync2Selected() {
@@ -437,7 +460,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, View.OnClickListen
         }
 
         fun onGpsUpdatesSlowSelected() {
-            TODO("Not yet implemented")
+
         }
 
         fun onGpsUpdatesMediumSelected() {
@@ -449,7 +472,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, View.OnClickListen
         }
 
         fun onResetSelected() {
-            TODO("Not yet implemented")
+            mMap.clear()
+            onDirectionUpSelected()
         }
 
 
@@ -464,7 +488,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, View.OnClickListen
                 C.LOCATION_UPDATE_ACTION -> {
 
                     val navigationData =
-                        intent.getParcelableExtra<NavigationData>(C.NAVIGATION_DATA_UPDATE_KEY)
+                        intent.getParcelableExtra<NavigationData>(C.IntentExtraKeys.NAVIGATION_DATA_UPDATE)
 
                     val location = navigationData?.currentLocation
                     val bearing = location?.bearing
@@ -482,7 +506,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, View.OnClickListen
                     }
 
 
-                    val session = intent.getParcelableExtra<Session>(C.SESSION_UPDATE_KEY)
+                    val session =
+                        intent.getParcelableExtra<Session>(C.IntentExtraKeys.SESSION_UPDATE)
 
                     Log.d(TAG, "Range: ${speedRange}")
 
@@ -500,6 +525,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, View.OnClickListen
                     }
                 }
                 C.LOCATION_SERVICE_START_ACTION -> {
+
                     setStartStopButton(R.drawable.ic_stop)
                 }
                 C.SESSION_STOP_CONFIRM_ACTION -> {

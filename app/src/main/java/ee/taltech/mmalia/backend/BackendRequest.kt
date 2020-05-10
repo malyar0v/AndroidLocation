@@ -6,9 +6,10 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.util.*
 
-abstract class BackendRequest(val url: String) {
+abstract class BackendRequest(val path: String) {
 
     companion object {
+        internal const val BASE_URL = "https://sportmap.akaver.com/api/v1.0"
         internal const val CONTENT_TYPE = "application/json"
     }
 
@@ -17,21 +18,22 @@ abstract class BackendRequest(val url: String) {
     abstract fun build(): Request
 }
 
-open class BackendGetRequest(url: String) : BackendRequest(url) {
+open class BackendGetRequest(path: String) : BackendRequest(path) {
 
     override fun build(): Request {
         return Request.Builder()
-            .url(url)
+            .url(BASE_URL + path)
             .get()
+            .addHeader("Content-Type", CONTENT_TYPE)
             .build()
     }
 }
 
-open class BackendPostRequest(url: String) : BackendRequest(url) {
+open class BackendPostRequest(path: String) : BackendRequest(path) {
 
     override fun build(): Request {
         return Request.Builder()
-            .url(url)
+            .url(BASE_URL + path)
             .post(toJson().toRequestBody(CONTENT_TYPE.toMediaType()))
             .build()
     }
@@ -42,29 +44,31 @@ class RegisterRequest(
     val lastName: String,
     val email: String,
     val password: String
-) : BackendPostRequest("https://sportmap.akaver.com/api/account/register")
+) : BackendPostRequest("/account/register")
 
 class LogInRequest(val email: String, val password: String) :
-    BackendPostRequest("https://sportmap.akaver.com/api/account/login")
+    BackendPostRequest("/account/login")
 
 class NewSessionRequest(
     val name: String,
     val description: String,
-    val recordedAt: Date
-) : BackendPostRequest("https://sportmap.akaver.com/api/GpsSessions")
+    val recordedAt: Date,
+    val paceMin: Int,
+    val paceMax: Int
+) : BackendPostRequest("/GpsSessions")
 
-class LocationTypesRequest : BackendGetRequest("https://sportmap.akaver.com/api/GpsLocationTypes")
+class LocationTypesRequest : BackendGetRequest("/GpsLocationTypes")
 
 class SessionInfoRequest(val id: String) :
-    BackendGetRequest("https://sportmap.akaver.com/api/GpsSessions/${id}")
+    BackendGetRequest("/GpsSessions/${id}")
 
 class NewLocationRequest(
     val recordedAt: Date,
     val latitude: Double,
     val longitude: Double,
-    val accuracy: Double,
+    val accuracy: Float,
     val altitude: Double,
-    val verticalAccuracy: Double,
+    val verticalAccuracy: Float,
     val gpsSessionId: String,
     val gpsLocationTypeId: String
-) : BackendPostRequest("https://sportmap.akaver.com/api/GpsLocations")
+) : BackendPostRequest("/GpsLocations")

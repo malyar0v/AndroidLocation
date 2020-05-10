@@ -12,6 +12,9 @@ import ee.taltech.mmalia.C
 import ee.taltech.mmalia.ObjectBox
 import ee.taltech.mmalia.Utils.NavigationData.Companion.distance
 import ee.taltech.mmalia.Utils.NavigationData.Companion.speed
+import ee.taltech.mmalia.backend.BackendResponse
+import ee.taltech.mmalia.backend.NewLocationQuery
+import ee.taltech.mmalia.backend.NewSessionQuery
 import ee.taltech.mmalia.model.NavigationData
 import ee.taltech.mmalia.model.Session
 import ee.taltech.mmalia.model.SimpleLocation
@@ -19,10 +22,11 @@ import ee.taltech.mmalia.service.notification.ConfirmationNotification
 import ee.taltech.mmalia.service.notification.NavigationNotification
 import io.objectbox.Box
 import io.objectbox.kotlin.boxFor
+import java.util.*
 
 interface LocationServiceEventsListener {
 
-    fun onServiceStart()
+    fun onServiceStart(intent: Intent?)
     fun onNewLocation(location: Location)
     fun onServiceStop()
 }
@@ -52,14 +56,33 @@ class LocationServiceManager(val locationService: LocationService) :
 
     private val sessionBox: Box<Session> = ObjectBox.boxStore.boxFor()
 
-    override fun onServiceStart() {
+    override fun onServiceStart(intent: Intent?) {
         navigationData = NavigationData()
-        session = Session()
+        session = Session().apply {
+            intent?.let {
+                title = it.getStringExtra(C.IntentExtraKeys.SESSION_TITLE) ?: Session.DEFAULT.title
+                description = it.getStringExtra(C.IntentExtraKeys.SESSION_DESCRIPTION)
+                    ?: Session.DEFAULT.description
+            }
+
+        }
 
         locationService.startForeground(
             C.NOTIFICATION_NAVIGATION_ID,
             NavigationNotification.create(context, navigationData)
         )
+
+
+        NewSessionQuery(
+            session.title,
+            session.description,
+            Date(),
+            { response ->
+                session.backendId = response.id
+            },
+            {}
+        )
+            .execute()
     }
 
     override fun onNewLocation(location: Location) {
@@ -75,7 +98,7 @@ class LocationServiceManager(val locationService: LocationService) :
                 cpStartTime = location.time
                 wpStartTime = location.time
             } else {
-                sessionDistance = distance(startLocation!!, location)
+                sessionDistance += distance(currentLocation!!, location)
                 sessionDuration = location.time - sessionStartTime
                 sessionSpeed = speed(sessionDistance, sessionDuration)
 
@@ -93,6 +116,7 @@ class LocationServiceManager(val locationService: LocationService) :
             currentLocation = location
         }
 
+        sync(location, BackendResponse.LocationTypesResponse.LOC)
 
         if (showingNavigationNotification)
             locationService.startForeground(
@@ -104,20 +128,36 @@ class LocationServiceManager(val locationService: LocationService) :
             )
 
         session.locations.add(SimpleLocation.from(location))
+        session.distance = navigationData.sessionDistance
 
         sessionBox.put(session)
 
         Log.d(TAG, "Session:\n${session}")
 
         val intent = Intent(C.LOCATION_UPDATE_ACTION)
-        intent.putExtra(C.NAVIGATION_DATA_UPDATE_KEY, navigationData)
-        intent.putExtra(C.SESSION_UPDATE_KEY, session)
+        intent.putExtra(C.IntentExtraKeys.NAVIGATION_DATA_UPDATE, navigationData)
+        intent.putExtra(C.IntentExtraKeys.SESSION_UPDATE, session)
         LocalBroadcastManager.getInstance(context).sendBroadcast(intent)
     }
 
     override fun onServiceStop() {
         // remove notifications
         NotificationManagerCompat.from(context).cancel(C.NOTIFICATION_NAVIGATION_ID)
+    }
+
+    fun sync(location: Location, typeId: String) {
+        NewLocationQuery(
+            Date(),
+            location.latitude,
+            location.longitude,
+            location.accuracy,
+            location.altitude,
+            location.accuracy,
+            session.backendId,
+            typeId
+            ,
+            {response ->  Log.d(TAG, "New location success!") },
+            {}).execute()
     }
 
     inner class UserEventsBroadcastReceiver : BroadcastReceiver() {
@@ -139,36 +179,44 @@ class LocationServiceManager(val locationService: LocationService) :
                 C.CP_ACTION -> {
                     Log.d(TAG, "CP clicked")
 
+                    val location = navigationData.currentLocation!!
+
                     navigationData.apply {
-                        cpStartTime = currentLocation!!.time
-                        cpLocation = currentLocation
+                        cpStartTime = location.time
+                        cpLocation = location
                         cpDistance = 0F
                         cpDistanceDirect = 0F
                         cpDuration = 0L
                         cpSpeed = 0F
                     }
 
-                    SimpleLocation.from(navigationData.cpLocation!!)
-                        .let { location -> session.checkpoints.add(location) }
+                    SimpleLocation.from(location)
+                        .let { session.checkpoints.add(it) }
 
                     sessionBox.put(session)
+
+                    sync(location, BackendResponse.LocationTypesResponse.CP)
                 }
                 C.WP_ACTION -> {
                     Log.d(TAG, "WP clicked")
 
+                    val location = navigationData.currentLocation!!
+
                     navigationData.apply {
-                        wpStartTime = currentLocation!!.time
-                        wpLocation = currentLocation
+                        wpStartTime = location.time
+                        wpLocation = location
                         wpDistance = 0F
                         wpDistanceDirect = 0F
                         wpDuration = 0L
                         wpSpeed = 0F
                     }
 
-                    SimpleLocation.from(navigationData.wpLocation!!)
-                        .let { location -> session.waypoints.add(location) }
+                    SimpleLocation.from(location)
+                        .let { session.waypoints.add(it) }
 
                     sessionBox.put(session)
+
+                    sync(location, BackendResponse.LocationTypesResponse.WP)
                 }
                 C.SESSION_STOP_CONFIRM_ACTION -> {
                     Log.d(TAG, "Stop confirmed")

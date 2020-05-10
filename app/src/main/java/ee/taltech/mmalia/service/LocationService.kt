@@ -125,7 +125,7 @@ class LocationService : Service() {
 
         LocalBroadcastManager.getInstance(this).sendBroadcast(Intent(C.LOCATION_SERVICE_START_ACTION))
 
-        locationServiceManager.onServiceStart()
+        locationServiceManager.onServiceStart(intent)
 
         return START_STICKY
     }

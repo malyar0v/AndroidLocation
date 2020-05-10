@@ -19,20 +19,31 @@ class SessionActivity : AppCompatActivity() {
         private val TAG = this::class.java.declaringClass!!.simpleName
     }
 
+    lateinit var sessionBox: Box<Session>
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_session)
 
         Log.d(TAG, "onCreate")
 
-        val sessionBox: Box<Session> = ObjectBox.boxStore.boxFor()
+        sessionBox = ObjectBox.boxStore.boxFor()
+        //        sessionBox.removeAll()
+    }
 
-//        sessionBox.removeAll()
+    override fun onResume() {
+        super.onResume()
 
-        layout_session_recycler_view.adapter = SessionRecyclerViewAdapter(
-            this,
-            sessionBox.query().orderDesc(Session_.start).build().find()
-        )
-        layout_session_recycler_view.layoutManager = LinearLayoutManager(this)
+        layout_session_recycler_view.apply {
+            adapter = SessionRecyclerViewAdapter(
+                this@SessionActivity,
+                sessionBox
+                    .query()
+                    .orderDesc(Session_.start)
+                    .build()
+                    .find()
+            )
+            layoutManager = LinearLayoutManager(this@SessionActivity)
+        }
     }
 }

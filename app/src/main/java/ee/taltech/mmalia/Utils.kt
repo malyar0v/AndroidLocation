@@ -1,12 +1,14 @@
 package ee.taltech.mmalia
 
+import android.content.Context
 import android.location.Location
 import android.widget.EditText
+import ee.taltech.mmalia.Utils.SharedPreferences.apiPreferences
 import ee.taltech.mmalia.model.SpeedRange
 import java.text.SimpleDateFormat
 import java.util.*
 
-class Utils {
+object Utils {
 
     object Extensions {
 
@@ -64,5 +66,32 @@ class Utils {
         private const val DATE_TIME_PATTERN = "HH:mm:ss | dd/MM/YYYY"
         val DATE_TIME_FORMATTER =
             SimpleDateFormat(DATE_TIME_PATTERN)
+    }
+
+    object SharedPreferences {
+
+        fun apiPreferences(ctx: Context) =
+            ctx.getSharedPreferences(C.SharedPreferences.API_PREFERENCES_KEY, Context.MODE_PRIVATE)
+    }
+
+    object Api {
+
+        fun getToken(ctx: Context) =
+            apiPreferences(ctx)
+                .getString(C.SharedPreferences.API_TOKEN_KEY, "")!!
+
+        fun setToken(ctx: Context, token: String) =
+            apiPreferences(ctx)
+                .edit()
+                .putString(C.SharedPreferences.API_TOKEN_KEY, token)
+                .apply()
+
+        fun clearToken(ctx: Context) =
+            apiPreferences(ctx)
+                .edit()
+                .remove(C.SharedPreferences.API_TOKEN_KEY)
+                .apply()
+
+        fun isLoggedIn(ctx: Context) = getToken(ctx).isNotEmpty()
     }
 }

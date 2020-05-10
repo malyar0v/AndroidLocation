@@ -15,6 +15,8 @@ class Session() : Parcelable {
     var id: Long = 0
 
     var title: String = "Title"
+    var description: String = ""
+    var distance: Float = 0F
 
     @Convert(converter = SpeedRangeConverter::class, dbType = String::class)
     var speedRange: SpeedRange = SpeedRange.DEFAULT
@@ -34,11 +36,14 @@ class Session() : Parcelable {
             }
         }
 
+    var backendId: String = ""
+
     constructor(parcel: Parcel) : this() {
         id = parcel.readLong()
-        parcel.readString()?.let {
-            title = it
-        }
+        title = parcel.readString() ?: title
+        description = parcel.readString() ?: description
+        distance = parcel.readFloat()
+        backendId = parcel.readString() ?: backendId
     }
 
     override fun toString(): String {
@@ -48,6 +53,9 @@ class Session() : Parcelable {
     override fun writeToParcel(parcel: Parcel, flags: Int) {
         parcel.writeLong(id)
         parcel.writeString(title)
+        parcel.writeString(description)
+        parcel.writeFloat(distance)
+        parcel.writeString(backendId)
     }
 
     override fun describeContents(): Int {
@@ -55,6 +63,9 @@ class Session() : Parcelable {
     }
 
     companion object CREATOR : Parcelable.Creator<Session> {
+
+        val DEFAULT = Session()
+
         override fun createFromParcel(parcel: Parcel): Session {
             return Session(parcel)
         }

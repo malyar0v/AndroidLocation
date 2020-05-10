@@ -5,7 +5,7 @@
   "entities": [
     {
       "id": "1:6867873421291126511",
-      "lastPropertyId": "5:2229196431598135315",
+      "lastPropertyId": "8:3789812954808701984",
       "name": "Session",
       "properties": [
         {
@@ -28,6 +28,22 @@
         {
           "id": "5:2229196431598135315",
           "name": "speedRange",
+          "type": 9
+        },
+        {
+          "id": "6:4243785555368127355",
+          "name": "description",
+          "type": 9
+        },
+        {
+          "id": "7:8936824584537398891",
+          "name": "distance",
+          "type": 7,
+          "flags": 4
+        },
+        {
+          "id": "8:3789812954808701984",
+          "name": "backendId",
           "type": 9
         }
       ],

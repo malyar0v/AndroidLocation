@@ -9,10 +9,7 @@ import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
-import ee.taltech.mmalia.BoundsInclusiveMapMode
-import ee.taltech.mmalia.ObjectBox
-import ee.taltech.mmalia.R
-import ee.taltech.mmalia.SessionMapTrackDrawer
+import ee.taltech.mmalia.*
 import ee.taltech.mmalia.model.Session
 import ee.taltech.mmalia.model.Session_
 import io.objectbox.Box
@@ -24,6 +21,7 @@ class SessionMapActivity : AppCompatActivity(), OnMapReadyCallback {
         private val TAG = this::class.java.declaringClass!!.simpleName
     }
 
+    lateinit var sessionBox: Box<Session>
     lateinit var session: Session
     lateinit var mMap: GoogleMap
 
@@ -32,8 +30,7 @@ class SessionMapActivity : AppCompatActivity(), OnMapReadyCallback {
         setContentView(R.layout.activity_session_map)
 
         val id = intent.getLongExtra(Session_.id.name, 0L)
-
-        val sessionBox: Box<Session> = ObjectBox.boxStore.boxFor()
+        sessionBox = ObjectBox.boxStore.boxFor()
         session = sessionBox.get(id)
 
         val mapFragment = supportFragmentManager.findFragmentById(R.id.map) as SupportMapFragment
@@ -42,6 +39,44 @@ class SessionMapActivity : AppCompatActivity(), OnMapReadyCallback {
 
     override fun onMapReady(googleMap: GoogleMap) {
         mMap = googleMap
+        drawTrack()
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
+        menuInflater.inflate(R.menu.activity_session_map_options_menu, menu)
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        when (item.itemId) {
+            R.id.menu_item_export -> onExportSelected()
+            R.id.menu_item_edit -> onEditSelected()
+        }
+        return true
+    }
+
+    private fun onEditSelected() {
+        SessionEditDialog(
+            this,
+            session,
+            {
+                sessionBox.put(session)
+                drawTrack()
+            },
+            {
+                sessionBox.remove(session)
+                onBackPressed()
+            })
+            .create()
+            .show()
+    }
+
+    private fun onExportSelected() {
+        TODO("Not yet implemented")
+    }
+
+    private fun drawTrack() {
+        mMap.clear()
 
         val start = session.locations.first()
         val end = session.locations.last()
@@ -61,21 +96,5 @@ class SessionMapActivity : AppCompatActivity(), OnMapReadyCallback {
                     .draw(5F)
                     .zoom(it)
             }
-    }
-
-    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
-        menuInflater.inflate(R.menu.activity_session_map_options_menu, menu)
-        return true
-    }
-
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        when(item.itemId) {
-            R.id.menu_item_export -> onExportSelected()
-        }
-        return true
-    }
-
-    private fun onExportSelected() {
-        TODO("Not yet implemented")
     }
 }

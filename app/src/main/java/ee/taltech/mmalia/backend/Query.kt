@@ -2,7 +2,6 @@ package ee.taltech.mmalia.backend
 
 import android.util.Log
 import com.fasterxml.jackson.databind.type.TypeFactory
-import ee.taltech.mmalia.Jackson
 import ee.taltech.mmalia.Jackson.mapper
 import ee.taltech.mmalia.OkHttpClient
 import okhttp3.Call
@@ -103,8 +102,10 @@ class NewSessionQuery(
     val description: String,
     val recordedAt: Date,
     val onSuccessCallback: (BackendResponse.SessionResponse) -> Unit,
-    val onErrorCallback: (BackendError) -> Unit
-) : Query(NewSessionRequest(name, description, recordedAt)) {
+    val onErrorCallback: (BackendError) -> Unit,
+    val paceMin: Int = 420,
+    val paceMax: Int = 600
+) : Query(NewSessionRequest(name, description, recordedAt, paceMin, paceMax)) {
 
     override fun onSuccess(response: Response) {
 
@@ -178,9 +179,9 @@ class NewLocationQuery(
     val recordedAt: Date,
     val latitude: Double,
     val longitude: Double,
-    val accuracy: Double,
+    val accuracy: Float,
     val altitude: Double,
-    val verticalAccuracy: Double,
+    val verticalAccuracy: Float,
     val gpsSessionId: String,
     val gpsLocationTypeId: String,
     val onSuccessCallback: (BackendResponse.NewLocationResponse) -> Unit,

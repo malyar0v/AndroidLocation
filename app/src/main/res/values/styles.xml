@@ -29,12 +29,16 @@
         <item name="autoSizeStepGranularity">1sp</item>
     </style>
 
-    <style name="control_btn">
-        <item name="android:maxLines">1</item>
-        <item name="autoSizeMaxTextSize">24sp</item>
-        <item name="autoSizeTextType">uniform</item>
-        <item name="autoSizeMinTextSize">4sp</item>
-        <item name="autoSizeStepGranularity">2sp</item>
+    <style name="dialog_label_login" parent="Widget.AppCompat.TextView">
+        <item name="android:textSize">18sp</item>
     </style>
+
+    <style name="dialog_edit_text_login" parent="Widget.AppCompat.EditText">
+        <item name="android:textSize">14sp</item>
+    </style>
+
+    <style name="dialog_label_registration" parent="dialog_label_login"/>
+
+    <style name="dialog_edit_text_registration" parent="dialog_edit_text_login"/>
 
 </resources>
