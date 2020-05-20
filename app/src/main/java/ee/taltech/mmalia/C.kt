@@ -19,6 +19,8 @@ object C {
     const val SESSION_STOP_CONFIRM_ACTION = "ee.taltech.mmalia.session_stop_confirm"
     const val SESSION_STOP_CANCEL_ACTION = "ee.taltech.mmalia.cp.session_stop_cancel"
 
+    const val GPS_UPDATE_FREQUENCY = "ee.taltech.mmalia.gps_update_frequency"
+    const val SYNC_FREQUENCY = "ee.taltech.mmalia.sync_frequency"
 
 
     object IntentExtraKeys {
@@ -28,6 +30,9 @@ object C {
         const val SESSION_TITLE = "Session title"
         const val SESSION_DESCRIPTION = "Session description"
         const val SESSION_BACKEND_ID = "Session backend id"
+        const val GPS_UPDATE_FREQUENCY = "GPS update frequency"
+        const val SYNC_FREQUENCY = "Sync frequency"
+        const val ACTIVITY_STATE = "Main activity state"
     }
 
     object SharedPreferences {

@@ -67,7 +67,7 @@
     },
     {
       "id": "2:8561800046678973377",
-      "lastPropertyId": "4:7419907063779690672",
+      "lastPropertyId": "6:3696991333250365169",
       "name": "SimpleLocation",
       "properties": [
         {
@@ -92,6 +92,18 @@
           "id": "4:7419907063779690672",
           "name": "time",
           "type": 6,
+          "flags": 4
+        },
+        {
+          "id": "5:8126312899646514993",
+          "name": "accuracy",
+          "type": 7,
+          "flags": 4
+        },
+        {
+          "id": "6:3696991333250365169",
+          "name": "altitude",
+          "type": 8,
           "flags": 4
         }
       ],

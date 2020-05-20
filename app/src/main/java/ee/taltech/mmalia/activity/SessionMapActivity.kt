@@ -1,8 +1,12 @@
 package ee.taltech.mmalia.activity
 
+import android.content.Context
 import android.os.Bundle
+import android.os.Environment
+import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
@@ -10,10 +14,15 @@ import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
 import ee.taltech.mmalia.*
+import ee.taltech.mmalia.backend.BackendSync
+import ee.taltech.mmalia.backend.NewSessionQuery
 import ee.taltech.mmalia.model.Session
 import ee.taltech.mmalia.model.Session_
 import io.objectbox.Box
 import io.objectbox.kotlin.boxFor
+import java.io.File
+import java.io.FileWriter
+import java.util.*
 
 class SessionMapActivity : AppCompatActivity(), OnMapReadyCallback {
 
@@ -51,6 +60,7 @@ class SessionMapActivity : AppCompatActivity(), OnMapReadyCallback {
         when (item.itemId) {
             R.id.menu_item_export -> onExportSelected()
             R.id.menu_item_edit -> onEditSelected()
+            R.id.menu_item_session_sync -> onSessionSync()
         }
         return true
     }
@@ -72,7 +82,52 @@ class SessionMapActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
     private fun onExportSelected() {
-        TODO("Not yet implemented")
+        val gpx = GpxWriter(session).create()
+
+        val name = "session-${session.id}.gpx"
+
+        openFileOutput(name, Context.MODE_PRIVATE).use {
+            it.write(gpx.toByteArray())
+        }
+
+        val path = getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS)?.absolutePath + "/" + name
+        val file = File(path)
+        FileWriter(file).use { it.append(gpx) }
+
+        Toast.makeText(this, "Saved to: $path", Toast.LENGTH_LONG).show()
+/*        val uri = Uri.fromFile(file)
+
+        val intent = Intent().apply {
+            action = Intent.ACTION_SEND
+            putExtra(Intent.EXTRA_TEXT, uri)
+            type = "text/plain"
+        }
+
+        startActivity(Intent.createChooser(intent, "Share session .gpx file"))*/
+
+        Log.d(TAG, "GPX")
+    }
+
+    private fun onSessionSync() {
+        NewSessionQuery(
+            session.title,
+            session.description,
+            Date(),
+            { response ->
+                session.backendId = response.id
+                BackendSync(
+                    BackendSync.State(
+                        session.backendId,
+                        LinkedList(session.locations),
+                        LinkedList(session.checkpoints),
+                        LinkedList(session.waypoints)
+                    )
+                )
+                    .run()
+            },
+            {}
+        )
+            .execute()
     }
 
     private fun drawTrack() {

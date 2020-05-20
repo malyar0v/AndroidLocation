@@ -12,8 +12,7 @@ import ee.taltech.mmalia.C
 import ee.taltech.mmalia.ObjectBox
 import ee.taltech.mmalia.Utils.NavigationData.Companion.distance
 import ee.taltech.mmalia.Utils.NavigationData.Companion.speed
-import ee.taltech.mmalia.backend.BackendResponse
-import ee.taltech.mmalia.backend.NewLocationQuery
+import ee.taltech.mmalia.backend.BackendSync
 import ee.taltech.mmalia.backend.NewSessionQuery
 import ee.taltech.mmalia.model.NavigationData
 import ee.taltech.mmalia.model.Session
@@ -36,6 +35,8 @@ class LocationServiceManager(val locationService: LocationService) :
 
     companion object {
         private val TAG = this::class.java.declaringClass!!.simpleName
+
+        private val DEFAULT_SYNC_INTERVAL: Long = 5 * 1000
     }
 
     private val context: Context = locationService.applicationContext
@@ -47,6 +48,8 @@ class LocationServiceManager(val locationService: LocationService) :
         addAction(C.WP_ACTION)
         addAction(C.SESSION_STOP_CONFIRM_ACTION)
         addAction(C.SESSION_STOP_CANCEL_ACTION)
+        addAction(C.GPS_UPDATE_FREQUENCY)
+        addAction(C.SYNC_FREQUENCY)
     }
 
     var showingNavigationNotification = true
@@ -55,6 +58,8 @@ class LocationServiceManager(val locationService: LocationService) :
     lateinit var navigationData: NavigationData
 
     private val sessionBox: Box<Session> = ObjectBox.boxStore.boxFor()
+    private var syncState: BackendSync.State? = null
+    private var timer: Timer? = null
 
     override fun onServiceStart(intent: Intent?) {
         navigationData = NavigationData()
@@ -72,21 +77,34 @@ class LocationServiceManager(val locationService: LocationService) :
             NavigationNotification.create(context, navigationData)
         )
 
-
         NewSessionQuery(
             session.title,
             session.description,
             Date(),
             { response ->
                 session.backendId = response.id
+                setUpSync(session.backendId, DEFAULT_SYNC_INTERVAL)
             },
             {}
         )
             .execute()
     }
 
+    fun isValidLocation(location: Location): Boolean {
+        if (location.accuracy > 20) {
+            return false
+        }
+        navigationData.currentLocation?.let {
+            return location.distanceTo(it) < 50
+        }
+
+        return true
+    }
+
     override fun onNewLocation(location: Location) {
         Log.i(TAG, "New location: $location")
+
+        if (!isValidLocation(location)) return
 
         navigationData.apply {
 
@@ -116,8 +134,6 @@ class LocationServiceManager(val locationService: LocationService) :
             currentLocation = location
         }
 
-        sync(location, BackendResponse.LocationTypesResponse.LOC)
-
         if (showingNavigationNotification)
             locationService.startForeground(
                 C.NOTIFICATION_NAVIGATION_ID,
@@ -127,10 +143,14 @@ class LocationServiceManager(val locationService: LocationService) :
                 )
             )
 
-        session.locations.add(SimpleLocation.from(location))
+        val simpleLocation = SimpleLocation.from(location)
+
+        session.locations.add(simpleLocation)
         session.distance = navigationData.sessionDistance
 
         sessionBox.put(session)
+
+        syncState?.locations?.add(simpleLocation)
 
         Log.d(TAG, "Session:\n${session}")
 
@@ -145,19 +165,20 @@ class LocationServiceManager(val locationService: LocationService) :
         NotificationManagerCompat.from(context).cancel(C.NOTIFICATION_NAVIGATION_ID)
     }
 
-    fun sync(location: Location, typeId: String) {
-        NewLocationQuery(
-            Date(),
-            location.latitude,
-            location.longitude,
-            location.accuracy,
-            location.altitude,
-            location.accuracy,
-            session.backendId,
-            typeId
-            ,
-            {response ->  Log.d(TAG, "New location success!") },
-            {}).execute()
+    fun setUpSync(sessionId: String, syncInterval: Long) {
+        syncState = BackendSync.State(sessionId, LinkedList(), LinkedList(), LinkedList())
+
+        updateSyncInterval(syncInterval)
+    }
+
+    fun updateSyncInterval(interval: Long) {
+        timer?.cancel()
+
+        syncState?.let { state ->
+            timer = Timer()
+            val task = BackendSync(state)
+            timer?.scheduleAtFixedRate(task, interval, interval)
+        }
     }
 
     inner class UserEventsBroadcastReceiver : BroadcastReceiver() {
@@ -191,11 +212,12 @@ class LocationServiceManager(val locationService: LocationService) :
                     }
 
                     SimpleLocation.from(location)
-                        .let { session.checkpoints.add(it) }
+                        .let {
+                            session.checkpoints.add(it)
+                            syncState?.checkpoints?.add(it)
+                        }
 
                     sessionBox.put(session)
-
-                    sync(location, BackendResponse.LocationTypesResponse.CP)
                 }
                 C.WP_ACTION -> {
                     Log.d(TAG, "WP clicked")
@@ -212,11 +234,12 @@ class LocationServiceManager(val locationService: LocationService) :
                     }
 
                     SimpleLocation.from(location)
-                        .let { session.waypoints.add(it) }
+                        .let {
+                            session.waypoints.add(it)
+                            syncState?.waypoints?.add(it)
+                        }
 
                     sessionBox.put(session)
-
-                    sync(location, BackendResponse.LocationTypesResponse.WP)
                 }
                 C.SESSION_STOP_CONFIRM_ACTION -> {
                     Log.d(TAG, "Stop confirmed")
@@ -229,6 +252,31 @@ class LocationServiceManager(val locationService: LocationService) :
                 C.SESSION_STOP_CANCEL_ACTION -> {
                     Log.d(TAG, "Stop cancelled")
                     showingNavigationNotification = true
+                }
+                C.GPS_UPDATE_FREQUENCY -> {
+                    val frequency = intent.getLongExtra(
+                        C.IntentExtraKeys.GPS_UPDATE_FREQUENCY,
+                        LocationService.UPDATE_INTERVAL_MEDIUM
+                    )
+
+                    Log.d(TAG, "GPS frequency changed to: $frequency")
+
+                    locationService.updateFrequency(frequency)
+                }
+                C.SYNC_FREQUENCY -> {
+                    val option = intent.getIntExtra(C.IntentExtraKeys.SYNC_FREQUENCY, 0)
+
+                    val secs = {
+                        when (option) {
+                            0 -> 5
+                            1 -> 30
+                            else -> 60
+                        }
+                    }()
+
+                    Log.d(TAG, "Sync frequency changed to: $secs sec")
+
+                    updateSyncInterval((secs * 1000).toLong())
                 }
             }
         }

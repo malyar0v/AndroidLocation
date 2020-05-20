@@ -5,7 +5,7 @@
   "entities": [
     {
       "id": "1:6867873421291126511",
-      "lastPropertyId": "7:8936824584537398891",
+      "lastPropertyId": "8:3789812954808701984",
       "name": "Session",
       "properties": [
         {
@@ -40,6 +40,11 @@
           "name": "distance",
           "type": 7,
           "flags": 4
+        },
+        {
+          "id": "8:3789812954808701984",
+          "name": "backendId",
+          "type": 9
         }
       ],
       "relations": [

@@ -1,9 +1,6 @@
 package ee.taltech.mmalia.backend
 
 import android.content.Context
-import android.os.Handler
-import android.os.Looper
-import android.widget.Toast
 import ee.taltech.mmalia.Utils
 import okhttp3.Authenticator
 import okhttp3.Request
@@ -14,10 +11,10 @@ class BackendAuthenticator(val ctx: Context) : Authenticator {
 
     override fun authenticate(route: Route?, response: Response): Request? {
         if (response.request.header("Authorization") != null) {
-            Handler(Looper.getMainLooper()).post {
-                Utils.Api.clearToken(ctx)
-                Toast.makeText(ctx, "Log in for syncing to work", Toast.LENGTH_LONG).show()
-            }
+//            Handler(Looper.getMainLooper()).post {
+//                Utils.Api.clearToken(ctx)
+//                Toast.makeText(ctx, "Log in for syncing to work", Toast.LENGTH_LONG).show()
+//            }
             return null // Give up, we've already attempted to authenticate.
         }
 

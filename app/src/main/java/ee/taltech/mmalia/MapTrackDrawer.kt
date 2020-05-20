@@ -22,10 +22,15 @@ abstract class MapTrackDrawer(protected val map: GoogleMap) {
 
     abstract fun zoom(update: CameraUpdate): MapTrackDrawer
 
-    protected fun marker(location: SimpleLocation, title: String): MarkerOptions {
+    protected fun marker(
+        location: SimpleLocation,
+        title: String,
+        alpha: Float = 1F
+    ): MarkerOptions {
         return MarkerOptions()
             .position(LatLng(location.latitude, location.longitude))
             .title(title)
+            .alpha(alpha)
     }
 
     protected fun distanceBetween(start: SimpleLocation, finish: SimpleLocation): Float {
@@ -60,8 +65,8 @@ class IncrementalMapTrackDrawer(map: GoogleMap) : MapTrackDrawer(map) {
         val new: SimpleLocation = session.locations.last()
         val previous: SimpleLocation = session.locations[session.locations.lastIndex - 1]
 
-        if (previous in session.waypoints) map.addMarker(marker(previous, "WP"))
-        else if (previous in session.checkpoints) map.addMarker(marker(previous, "CP"))
+        if (previous in session.waypoints) map.addMarker(marker(previous, "WP", 0.5F))
+        else if (previous in session.checkpoints) map.addMarker(marker(previous, "CP", 0.5F))
 
         val distance = distanceBetween(previous, new)
         val speed = speed(distance, new.time - previous.time)
@@ -92,17 +97,23 @@ class IncrementalMapTrackDrawer(map: GoogleMap) : MapTrackDrawer(map) {
     }
 }
 
-class SessionMapTrackDrawer(map: GoogleMap, private val session: Session) :
+class SessionMapTrackDrawer(
+    map: GoogleMap,
+    private val session: Session,
+    val markEdges: Boolean = true
+) :
     MapTrackDrawer(map) {
 
     override fun draw(width: Float): SessionMapTrackDrawer {
+
+        if (session.locations.size < 2) return this
 
         val polyline = PolylineOptions()
 
         for ((idx, location) in session.locations.withIndex()) {
 
-            if (isWp(location)) map.addMarker(marker(location, "WP"))
-            else if (isCp(location)) map.addMarker(marker(location, "CP"))
+            if (isWp(location)) map.addMarker(marker(location, "WP", 0.5F))
+            else if (isCp(location)) map.addMarker(marker(location, "CP", 0.5F))
 
             val next = if (idx + 1 < session.locations.size) session.locations[idx + 1] else break
 
@@ -120,17 +131,21 @@ class SessionMapTrackDrawer(map: GoogleMap, private val session: Session) :
                 width(width)
                 color(color)
             }
-
         }
 
         map.addPolyline(polyline)
-        map.addMarker(marker(session.locations.first(), "Start"))
-        map.addMarker(marker(session.locations.last(), "Finish"))
+
+        if (markEdges) {
+            map.addMarker(marker(session.locations.first(), "Start"))
+            map.addMarker(marker(session.locations.last(), "Finish"))
+        }
 
         return this
     }
 
     override fun zoom(update: CameraUpdate): SessionMapTrackDrawer {
+
+        if (session.locations.size < 2) return this
 
         val start = session.locations.first()
         val end = session.locations.last()
@@ -242,6 +257,12 @@ class BoundsInclusiveMapMode
 
 abstract class MapMode {
 
+    companion object {
+        const val NORTH_UP = 0
+        const val DIRECTION_UP = 1
+        const val NO_ZOOM = 2
+    }
+
     var zoomLevel: Float = 19F
     var bearing: Float = 0F
 
@@ -272,7 +293,6 @@ class NorthUpMapMode : MapMode() {
                 .bearing(0F)
                 .build()
         )
-
     }
 }
 

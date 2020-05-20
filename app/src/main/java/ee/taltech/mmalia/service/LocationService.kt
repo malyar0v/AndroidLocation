@@ -14,17 +14,18 @@ class LocationService : Service() {
     companion object {
         private val TAG = this::class.java.declaringClass!!.simpleName
 
+        // The desired intervals for location updates. Inexact. Updates may be more or less frequent.
+        public val UPDATE_INTERVAL_SLOW: Long = 3000
+        public val UPDATE_INTERVAL_MEDIUM: Long = 1500
+        public val UPDATE_INTERVAL_FAST: Long = 500
+
         var running = false
             private set
     }
 
     private lateinit var locationServiceManager: LocationServiceManager
 
-    // The desired intervals for location updates. Inexact. Updates may be more or less frequent.
-    private val UPDATE_INTERVAL_IN_MILLISECONDS: Long = 2000
-    private val FASTEST_UPDATE_INTERVAL_IN_MILLISECONDS = UPDATE_INTERVAL_IN_MILLISECONDS / 2
-
-    private val mLocationRequest: LocationRequest = LocationRequest()
+    private var mLocationRequest: LocationRequest? = null
     private lateinit var mFusedLocationClient: FusedLocationProviderClient
     private var mLocationCallback: LocationCallback? = null
 
@@ -42,19 +43,22 @@ class LocationService : Service() {
 
         mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
-        mLocationCallback = object : LocationCallback() {
-            override fun onLocationResult(locationResult: LocationResult) {
-                super.onLocationResult(locationResult)
-                locationServiceManager.onNewLocation(locationResult.lastLocation)
-            }
-        }
+        mLocationCallback = createLocationCallback()
 
         getLastLocation()
 
-        createLocationRequest()
+        mLocationRequest = createLocationRequest(UPDATE_INTERVAL_MEDIUM)
         requestLocationUpdates()
 
         running = true
+    }
+
+    fun updateFrequency(frequency: Long) {
+        createLocationRequest(frequency)
+
+        mFusedLocationClient.removeLocationUpdates(mLocationCallback)
+
+        requestLocationUpdates()
     }
 
     fun requestLocationUpdates() {
@@ -73,11 +77,24 @@ class LocationService : Service() {
         }
     }
 
-    private fun createLocationRequest() {
-        mLocationRequest.setInterval(UPDATE_INTERVAL_IN_MILLISECONDS)
-        mLocationRequest.setFastestInterval(FASTEST_UPDATE_INTERVAL_IN_MILLISECONDS)
-        mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY)
-        mLocationRequest.setMaxWaitTime(UPDATE_INTERVAL_IN_MILLISECONDS)
+    private fun createLocationCallback(): LocationCallback {
+        return object : LocationCallback() {
+            override fun onLocationResult(locationResult: LocationResult) {
+                super.onLocationResult(locationResult)
+                locationServiceManager.onNewLocation(locationResult.lastLocation)
+            }
+        }
+    }
+
+    private fun createLocationRequest(frequency: Long): LocationRequest {
+        val locationRequest = LocationRequest()
+
+        locationRequest.setInterval(frequency)
+        locationRequest.setFastestInterval(UPDATE_INTERVAL_FAST)
+        locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY)
+        locationRequest.setMaxWaitTime(frequency)
+
+        return locationRequest
     }
 
 
@@ -123,7 +140,8 @@ class LocationService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         Log.d(TAG, "onStartCommand")
 
-        LocalBroadcastManager.getInstance(this).sendBroadcast(Intent(C.LOCATION_SERVICE_START_ACTION))
+        LocalBroadcastManager.getInstance(this)
+            .sendBroadcast(Intent(C.LOCATION_SERVICE_START_ACTION))
 
         locationServiceManager.onServiceStart(intent)
 

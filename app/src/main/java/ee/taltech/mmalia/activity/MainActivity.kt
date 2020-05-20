@@ -27,12 +27,14 @@ import ee.taltech.mmalia.Utils.Extensions.parse
 import ee.taltech.mmalia.backend.BackendAuthenticator
 import ee.taltech.mmalia.backend.LogInQuery
 import ee.taltech.mmalia.backend.RegisterQuery
+import ee.taltech.mmalia.model.ActivityState
 import ee.taltech.mmalia.model.NavigationData
 import ee.taltech.mmalia.model.Session
 import ee.taltech.mmalia.model.SpeedRange
 import ee.taltech.mmalia.service.LocationService
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.map_navigation.*
+import kotlin.math.abs
 
 class MainActivity : AppCompatActivity(), OnMapReadyCallback, View.OnClickListener {
 
@@ -40,14 +42,14 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, View.OnClickListen
         private val TAG = this::class.java.declaringClass!!.simpleName
     }
 
+    private var activityState = ActivityState()
+
     private val menuHandler = OptionsMenuHandler()
 
-    private lateinit var mMap: GoogleMap
+    private var mMap: GoogleMap? = null
     private lateinit var mapTrackDrawer: IncrementalMapTrackDrawer
     private var mapMode: MapMode = NorthUpMapMode()
     private lateinit var speedRange: SpeedRange
-
-    //private var loggedIn = false
 
     private val broadcastReceiver = InnerBroadcastReceiver()
     private val broadcastReceiverIntentFilter: IntentFilter = IntentFilter()
@@ -79,6 +81,12 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, View.OnClickListen
         wp_img_btn.setOnClickListener(this)
     }
 
+    override fun onStart() {
+        super.onStart()
+
+        Log.d(TAG, "onStart")
+    }
+
     override fun onResume() {
         super.onResume()
         Log.d(TAG, "onResume")
@@ -101,6 +109,12 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, View.OnClickListen
             )
                 .show()
         }
+
+        if (mMap != null) {
+            Log.d(TAG, "Map is not null!")
+
+            redrawTrack(activityState.session)
+        }
     }
 
     override fun onStop() {
@@ -111,7 +125,43 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, View.OnClickListen
     }
 
     override fun onCreateOptionsMenu(menu: Menu) = menuHandler.onCreateOptionsMenu(menu)
+
+
     override fun onOptionsItemSelected(item: MenuItem) = menuHandler.onOptionsItemSelected(item)
+
+    override fun onRestoreInstanceState(savedInstanceState: Bundle) {
+        restoreState(savedInstanceState)
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+
+        outState.putParcelable(C.IntentExtraKeys.ACTIVITY_STATE, activityState)
+    }
+
+    private fun restoreState(savedInstanceState: Bundle?) {
+        Log.d(TAG, "onRestoreInstanceState")
+
+        savedInstanceState?.getParcelable<ActivityState>(C.IntentExtraKeys.ACTIVITY_STATE)
+            ?.let { state ->
+                Log.d(TAG, "onRestoreInstanceState retrieved state!")
+
+                compass.visibility =
+                    if (state.compass) View.VISIBLE
+                    else View.INVISIBLE
+
+                mapMode = when (state.mapMode) {
+                    MapMode.NORTH_UP -> NorthUpMapMode()
+                    MapMode.DIRECTION_UP -> DirectionUpMapMode()
+                    MapMode.NO_ZOOM -> NoZoomMapMode()
+
+                    else -> NorthUpMapMode()
+                }
+
+                updateUi(state.navigationData)
+                activityState = state
+            }
+    }
 
     private fun restorePreferences(sharedPref: SharedPreferences) {
         val min =
@@ -119,6 +169,27 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, View.OnClickListen
         val max =
             sharedPref.getInt(C.SharedPreferences.OPTIMAL_SPEED_MAX_KEY, SpeedRange.DEFAULT_MAX)
         speedRange = SpeedRange(min..max)
+    }
+
+    private fun updateUi(navigationData: NavigationData) {
+        navigationData.run {
+            session_distance_text_view.text = sessionDistance()
+            session_duration_text_view.text = sessionDuration()
+            session_speed_text_view.text = sessionSpeed()
+            distance_cp_text_view.text = cpDistance()
+            direct_distance_cp_text_view.text = cpDirectDistance()
+            cp_speed_text_view.text = cpSpeed()
+            distance_wp_text_view.text = wpDistance()
+            direct_distance_wp_text_view.text = wpDirectDistance()
+            wp_speed_text_view.text = wpSpeed()
+        }
+    }
+
+    private fun redrawTrack(session: Session) {
+        mMap?.let { map ->
+            map.clear()
+            SessionMapTrackDrawer(map, session, markEdges = false).draw(10F)
+        }
     }
 
     // ============================================== GOOGLE MAPS =============================================
@@ -132,10 +203,17 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, View.OnClickListen
      * it inside the SupportMapFragment. This method will only be triggered once the user has
      * installed Google Play services and returned to the app.
      */
+
     override fun onMapReady(googleMap: GoogleMap) {
+        Log.d(TAG, "Map ready!")
+
+        googleMap.isMyLocationEnabled = true
+
+        // TODO:
+//        redrawTrack(activityState.session)
+        mapTrackDrawer = IncrementalMapTrackDrawer(googleMap)
+
         mMap = googleMap
-        mMap.isMyLocationEnabled = true
-        mapTrackDrawer = IncrementalMapTrackDrawer(mMap)
     }
 
     // ============================================== PERMISSION HANDLING =============================================
@@ -228,7 +306,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, View.OnClickListen
     // ============================================== CLICK HANDLERS =============================================
 
     override fun onClick(v: View?) {
-
         v?.let {
             when (it.id) {
                 R.id.start_stop_img_btn -> {
@@ -254,6 +331,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, View.OnClickListen
     fun onStartStopClick() {
 
         if (!LocationService.running) {
+
             SessionStartDialog(this, { title, description ->
                 val i = Intent(this, LocationService::class.java)
                     .apply {
@@ -331,6 +409,9 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, View.OnClickListen
         }
 
         fun updateMenu() {
+            if (activityState.mapMode == MapMode.NO_ZOOM)
+                menu.findItem(R.id.menu_item_auto_zoom).isChecked = false
+
             if (Utils.Api.isLoggedIn(context)) {
                 menu.findItem(R.id.menu_item_login).isVisible = false
                 menu.findItem(R.id.menu_item_register).isVisible = false
@@ -348,14 +429,24 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, View.OnClickListen
             if (item.isChecked) {
                 mapMode = NoZoomMapMode()
                 item.isChecked = false
+
+                activityState.mapMode = MapMode.NO_ZOOM
             } else {
                 mapMode = NorthUpMapMode()
                 item.isChecked = true
+
+                activityState.mapMode = MapMode.NORTH_UP
             }
         }
 
         fun onCompassSelected() {
-            TODO("Not yet implemented")
+            if (compass.visibility == View.VISIBLE) {
+                compass.visibility = View.INVISIBLE
+                activityState.compass = false
+            } else {
+                compass.visibility = View.VISIBLE
+                activityState.compass = true
+            }
         }
 
         fun onHistorySelected() {
@@ -364,10 +455,12 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, View.OnClickListen
 
         fun onNorthUpSelected() {
             mapMode = NorthUpMapMode()
+            activityState.mapMode = MapMode.NORTH_UP
         }
 
         fun onDirectionUpSelected() {
             mapMode = DirectionUpMapMode()
+            activityState.mapMode = MapMode.DIRECTION_UP
         }
 
         fun onOptimalSpeedSelected() {
@@ -398,6 +491,10 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, View.OnClickListen
                 .setNegativeButton("Cancel") { dialog, which -> }
                 .create()
                 .show()
+
+            activityState.session.speedRange = speedRange
+
+            redrawTrack(activityState.session)
         }
 
         fun authorize(token: String) {
@@ -448,31 +545,61 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, View.OnClickListen
         }
 
         fun onSync1Selected() {
-
+            notifyLocationService(Intent(C.SYNC_FREQUENCY).apply {
+                putExtra(
+                    C.IntentExtraKeys.SYNC_FREQUENCY,
+                    0
+                )
+            })
         }
 
         fun onSync2Selected() {
-            TODO("Not yet implemented")
+            notifyLocationService(Intent(C.SYNC_FREQUENCY).apply {
+                putExtra(
+                    C.IntentExtraKeys.SYNC_FREQUENCY,
+                    1
+                )
+            })
         }
 
         fun onSync3Selected() {
-            TODO("Not yet implemented")
+            notifyLocationService(Intent(C.SYNC_FREQUENCY).apply {
+                putExtra(
+                    C.IntentExtraKeys.SYNC_FREQUENCY,
+                    2
+                )
+            })
         }
 
         fun onGpsUpdatesSlowSelected() {
-
+            notifyLocationService(Intent(C.GPS_UPDATE_FREQUENCY).apply {
+                putExtra(
+                    C.IntentExtraKeys.GPS_UPDATE_FREQUENCY,
+                    LocationService.UPDATE_INTERVAL_SLOW
+                )
+            })
         }
 
         fun onGpsUpdatesMediumSelected() {
-            TODO("Not yet implemented")
+            notifyLocationService(Intent(C.GPS_UPDATE_FREQUENCY).apply {
+                putExtra(
+                    C.IntentExtraKeys.GPS_UPDATE_FREQUENCY,
+                    LocationService.UPDATE_INTERVAL_MEDIUM
+                )
+            })
         }
 
         fun onGpsUpdatesFastSelected() {
-            TODO("Not yet implemented")
+            notifyLocationService(Intent(C.GPS_UPDATE_FREQUENCY).apply {
+                putExtra(
+                    C.IntentExtraKeys.GPS_UPDATE_FREQUENCY,
+                    LocationService.UPDATE_INTERVAL_FAST
+                )
+            })
         }
 
         fun onResetSelected() {
-            mMap.clear()
+            mMap?.clear()
             onDirectionUpSelected()
         }
 
@@ -494,15 +621,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, View.OnClickListen
                     val bearing = location?.bearing
 
                     navigationData?.run {
-                        session_distance_text_view.text = sessionDistance()
-                        session_duration_text_view.text = sessionDuration()
-                        session_speed_text_view.text = sessionSpeed()
-                        distance_cp_text_view.text = cpDistance()
-                        direct_distance_cp_text_view.text = cpDirectDistance()
-                        cp_speed_text_view.text = cpSpeed()
-                        distance_wp_text_view.text = wpDistance()
-                        direct_distance_wp_text_view.text = wpDirectDistance()
-                        wp_speed_text_view.text = wpSpeed()
+                        this@MainActivity.updateUi(this)
+                        activityState.navigationData = this
                     }
 
 
@@ -512,16 +632,23 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, View.OnClickListen
                     Log.d(TAG, "Range: ${speedRange}")
 
                     if (session != null && location != null) {
+                        session.speedRange = speedRange
 
-                        mapTrackDrawer
-                            .update(session)
-                            .draw(5F)
-                            .zoom(
-                                mapMode
-                                    .bearing(bearing!!)
-                                    .cameraUpdate(LatLng(location.latitude, location.longitude))
-                                    ?: return
-                            )
+                        if (abs(activityState.session.locations.size - session.locations.size) > 1) {
+                            redrawTrack(session)
+                        } else {
+                            mapTrackDrawer
+                                .update(session)
+                                .draw(10F)
+                                .zoom(
+                                    mapMode
+                                        .bearing(bearing!!)
+                                        .cameraUpdate(LatLng(location.latitude, location.longitude))
+                                        ?: return
+                                )
+                        }
+
+                        activityState.session = session
                     }
                 }
                 C.LOCATION_SERVICE_START_ACTION -> {

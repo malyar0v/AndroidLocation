@@ -6,25 +6,22 @@
     android:layout_height="match_parent"
     android:id="@+id/activity_main">
 
-<!--    <include
-        android:id="@+id/include"
-        layout="@layout/map_controls"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        android:layout_marginStart="8dp"
-        android:layout_marginTop="8dp"
-        android:layout_marginEnd="8dp"
-        app:layout_constraintBottom_toTopOf="@+id/top_guideline"
-        app:layout_constraintEnd_toEndOf="parent"
+    <edu.arbelkilani.compass.Compass
+        android:id="@+id/compass"
+        android:layout_width="100dp"
+        android:layout_height="100dp"
+        android:layout_alignParentStart="true"
+        android:layout_centerVertical="true"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="16dp"
+        android:translationZ="1000dp"
+        app:degree_value_color="@color/colorAccent"
+        app:degrees_step="5"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
-
-    <androidx.constraintlayout.widget.Guideline
-        android:id="@+id/top_guideline"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        app:layout_constraintGuide_percent="0.10" />-->
+        app:layout_constraintTop_toTopOf="parent"
+        app:show_border="false"
+        app:show_degree_value="false"
+        app:show_orientation_labels="true" />
 
     <include
         android:id="@+id/include2"
