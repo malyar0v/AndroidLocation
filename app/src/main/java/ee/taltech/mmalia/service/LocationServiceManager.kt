@@ -91,9 +91,9 @@ class LocationServiceManager(val locationService: LocationService) :
     }
 
     fun isValidLocation(location: Location): Boolean {
-        if (location.accuracy > 20) {
+/*        if (location.accuracy > 20) {
             return false
-        }
+        }*/
         navigationData.currentLocation?.let {
             return location.distanceTo(it) < 50
         }

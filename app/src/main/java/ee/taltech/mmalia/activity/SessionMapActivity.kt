@@ -112,7 +112,7 @@ class SessionMapActivity : AppCompatActivity(), OnMapReadyCallback {
         NewSessionQuery(
             session.title,
             session.description,
-            Date(),
+            Date(session.locations.firstOrNull()?.time ?: Date().time),
             { response ->
                 session.backendId = response.id
                 BackendSync(
