@@ -1,13 +1,12 @@
 package ee.taltech.mmalia.activity
 
-import android.content.Context
+import android.content.Intent
 import android.os.Bundle
-import android.os.Environment
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.FileProvider
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
@@ -86,24 +85,22 @@ class SessionMapActivity : AppCompatActivity(), OnMapReadyCallback {
 
         val name = "session-${session.id}.gpx"
 
-        openFileOutput(name, Context.MODE_PRIVATE).use {
-            it.write(gpx.toByteArray())
-        }
+        val path = filesDir
 
-        val path = getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS)?.absolutePath + "/" + name
-        val file = File(path)
+        val file = File(path, name)
         FileWriter(file).use { it.append(gpx) }
 
-        Toast.makeText(this, "Saved to: $path", Toast.LENGTH_LONG).show()
-/*        val uri = Uri.fromFile(file)
+        val uri = FileProvider.getUriForFile(this, "ee.taltech.mmalia.hw2", file)
 
         val intent = Intent().apply {
             action = Intent.ACTION_SEND
-            putExtra(Intent.EXTRA_TEXT, uri)
-            type = "text/plain"
+            putExtra(Intent.EXTRA_SUBJECT, "GPX from @mmalia")
+            putExtra(Intent.EXTRA_TEXT, "Sending you my GPX of ${session.title} session!")
+            putExtra(Intent.EXTRA_STREAM, uri)
+            type = "message/rfc822"
         }
 
-        startActivity(Intent.createChooser(intent, "Share session .gpx file"))*/
+        startActivity(Intent.createChooser(intent, "Share session .gpx file"))
 
         Log.d(TAG, "GPX")
     }
@@ -148,7 +145,7 @@ class SessionMapActivity : AppCompatActivity(), OnMapReadyCallback {
             .bounds(bounds)
             .cameraUpdate()?.let {
                 SessionMapTrackDrawer(mMap, session)
-                    .draw(5F)
+                    .draw(10F)
                     .zoom(it)
             }
     }

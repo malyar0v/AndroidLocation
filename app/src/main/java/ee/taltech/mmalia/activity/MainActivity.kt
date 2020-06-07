@@ -126,7 +126,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, View.OnClickListen
 
     override fun onCreateOptionsMenu(menu: Menu) = menuHandler.onCreateOptionsMenu(menu)
 
-
     override fun onOptionsItemSelected(item: MenuItem) = menuHandler.onOptionsItemSelected(item)
 
     override fun onRestoreInstanceState(savedInstanceState: Bundle) {
@@ -286,7 +285,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, View.OnClickListen
                     "You denied GPS! What can I do?",
                     Snackbar.LENGTH_INDEFINITE
                 )
-                    .setAction("Settings", View.OnClickListener {
+                    .setAction("Settings") {
                         // Build intent that displays the App settings screen.
                         val intent = Intent()
                         intent.action = Settings.ACTION_APPLICATION_DETAILS_SETTINGS
@@ -297,7 +296,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, View.OnClickListen
                         intent.data = uri
                         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
                         startActivity(intent)
-                    })
+                    }
                     .show()
             }
         }

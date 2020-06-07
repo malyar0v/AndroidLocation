@@ -90,15 +90,15 @@ class LocationServiceManager(val locationService: LocationService) :
             .execute()
     }
 
-    fun isValidLocation(location: Location): Boolean {
-/*        if (location.accuracy > 20) {
-            return false
-        }*/
-        navigationData.currentLocation?.let {
-            return location.distanceTo(it) < 50
-        }
+    private fun isValidLocation(location: Location): Boolean {
+        val accuracy = location.accuracy < 18
+        val distance = {
+            val currentLocation = navigationData.currentLocation
+            if (currentLocation != null) location.distanceTo(currentLocation) < 25
+            else false
+        }()
 
-        return true
+        return accuracy && distance
     }
 
     override fun onNewLocation(location: Location) {

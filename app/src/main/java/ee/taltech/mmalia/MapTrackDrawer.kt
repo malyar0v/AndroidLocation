@@ -9,6 +9,7 @@ import com.google.android.gms.maps.model.*
 import ee.taltech.mmalia.Utils.NavigationData.Companion.speed
 import ee.taltech.mmalia.model.Session
 import ee.taltech.mmalia.model.SimpleLocation
+import ee.taltech.mmalia.model.SpeedRange
 
 abstract class MapTrackDrawer(protected val map: GoogleMap) {
 
@@ -108,7 +109,13 @@ class SessionMapTrackDrawer(
 
         if (session.locations.size < 2) return this
 
-        val polyline = PolylineOptions()
+        var color = SpeedRange.COLOR_SLOW
+        var previousColor: Int
+
+        var polyline = PolylineOptions().apply {
+            width(width)
+            color(color)
+        }
 
         for ((idx, location) in session.locations.withIndex()) {
 
@@ -119,17 +126,28 @@ class SessionMapTrackDrawer(
 
             val distance = distanceBetween(location, next)
             val speed = speed(distance, next.time - location.time)
-            val color = session.speedRange.color(speed)
 
+            previousColor = color
+            color = session.speedRange.color(speed)
 
-            polyline.apply {
-                add(
-                    LatLng(location.latitude, location.longitude),
-                    LatLng(next.latitude, next.longitude)
-                )
+            if (color == previousColor) {
+                polyline.apply {
+                    add(
+                        LatLng(location.latitude, location.longitude),
+                        LatLng(next.latitude, next.longitude)
+                    )
+                }
+            } else {
+                map.addPolyline(polyline)
 
-                width(width)
-                color(color)
+                polyline = PolylineOptions().apply {
+                    width(width)
+                    add(
+                        LatLng(location.latitude, location.longitude),
+                        LatLng(next.latitude, next.longitude)
+                    )
+                    color(color)
+                }
             }
         }
 
@@ -164,96 +182,6 @@ class SessionMapTrackDrawer(
     private fun isCp(location: SimpleLocation) = location in session.checkpoints
     private fun isWp(location: SimpleLocation) = location in session.waypoints
 }
-
-/*abstract class MapMode {
-
-    lateinit var target: LatLng
-    var zoom: Float? = null
-    var bearing: Float? = null
-    lateinit var bounds: LatLngBounds
-    var mapWidth: Int? = null
-    var mapHeight: Int? = null
-
-    fun target(target: LatLng): MapMode {
-        this.target = target
-
-        return this
-    }
-
-    fun zoom(zoom: Float): MapMode {
-        this.zoom = zoom
-
-        return this
-    }
-
-    fun bearing(bearing: Float): MapMode {
-        this.bearing = bearing
-
-        return this
-    }
-
-    fun mapWidth(width: Int): MapMode {
-        this.mapWidth = width
-
-        return this
-    }
-
-    fun mapHeight(height: Int): MapMode {
-        this.mapHeight = height
-
-        return this
-    }
-
-    abstract fun build(): CameraUpdate?
-}
-
-class NoZoomMapMode : MapMode() {
-    override fun build(): CameraUpdate? = null
-}
-
-class NorthUpMapMode : MapMode() {
-
-    override fun build(): CameraUpdate? {
-        return CameraUpdateFactory.newCameraPosition(
-            CameraPosition.Builder()
-                .target(target)
-                .zoom(zoom ?: 19F)
-                .bearing(0F)
-                .build()
-        )
-    }
-
-
-}
-
-class DirectionUpMapMode : MapMode() {
-
-    override fun build(): CameraUpdate? {
-        return CameraUpdateFactory.newCameraPosition(
-            CameraPosition.Builder()
-                .target(target)
-                .zoom(zoom ?: 19F)
-                .bearing(bearing ?: throw IllegalArgumentException("Specify bearing!"))
-                .build()
-        )
-    }
-}
-
-class BoundsInclusiveMapMode
-
-    : MapMode() {
-    override fun build(): CameraUpdate? {
-
-        val width = mapWidth ?: throw java.lang.IllegalArgumentException("Specify map width!")
-        val height = mapHeight ?: throw java.lang.IllegalArgumentException("Specify map height!")
-
-        val padding = (width * 0.05F).toInt() // offset from edges of the map 10% of screen
-
-        return CameraUpdateFactory.newLatLngBounds(bounds, width, height, padding)
-    }
-
-
-}*/
 
 abstract class MapMode {
 

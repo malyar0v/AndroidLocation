@@ -19,9 +19,9 @@ class SpeedRange(
         val DEFAULT =
             SpeedRange(DEFAULT_MIN..DEFAULT_MAX)
 
-        private const val COLOR_SLOW = Color.RED
-        private const val COLOR_OPTIMAL = Color.YELLOW
-        private const val COLOR_FAST = Color.GREEN
+        public const val COLOR_SLOW = Color.RED
+        public const val COLOR_OPTIMAL = Color.YELLOW
+        public const val COLOR_FAST = Color.GREEN
     }
 
     @Id
